@@ -18,6 +18,23 @@ const router = express.Router();
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+function inviteUrlForToken(token) {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return `${frontendUrl}/invites/${token}`;
+}
+
+/** Never expose raw invite tokens in API JSON — use inviteUrl only. */
+function serializeInvite(invite, { includeUrl = true } = {}) {
+  return {
+    id: invite.id,
+    email: invite.email,
+    role: invite.role,
+    createdAt: invite.createdAt,
+    expiresAt: invite.expiresAt,
+    ...(includeUrl && invite.token ? { inviteUrl: inviteUrlForToken(invite.token) } : {}),
+  };
+}
+
 async function countSearchOwners(searchId) {
   return prisma.searchMember.count({
     where: { searchId, role: 'owner' },
@@ -263,15 +280,7 @@ scopedRouter.get('/members', async (req, res) => {
         },
       });
 
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      pendingInvites = invites.map((invite) => ({
-        id: invite.id,
-        email: invite.email,
-        role: invite.role,
-        createdAt: invite.createdAt,
-        expiresAt: invite.expiresAt,
-        inviteUrl: `${frontendUrl}/invites/${invite.token}`,
-      }));
+      pendingInvites = invites.map((invite) => serializeInvite(invite));
     }
 
     res.json({ members, pendingInvites });
@@ -292,7 +301,7 @@ scopedRouter.get('/invites', requireOwner, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json({ invites });
+    res.json({ invites: invites.map((invite) => serializeInvite(invite)) });
   } catch (error) {
     console.error('List invites error:', error);
     res.status(500).json({ error: 'Failed to list invites' });
@@ -351,8 +360,7 @@ scopedRouter.post('/invites', requireOwner, async (req, res) => {
       },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const inviteUrl = `${frontendUrl}/invites/${invite.token}`;
+    const inviteUrl = inviteUrlForToken(invite.token);
 
     const inviter = await prisma.user.findUnique({
       where: { id: req.session.userId },
@@ -370,7 +378,7 @@ scopedRouter.post('/invites', requireOwner, async (req, res) => {
     } catch (emailError) {
       console.error('Invite email failed:', emailError);
       return res.status(201).json({
-        invite,
+        invite: serializeInvite(invite),
         inviteUrl,
         emailSent: false,
         warning: 'Invite created but email failed to send. Share the link manually.',
@@ -378,7 +386,7 @@ scopedRouter.post('/invites', requireOwner, async (req, res) => {
     }
 
     res.status(201).json({
-      invite,
+      invite: serializeInvite(invite),
       inviteUrl,
       emailSent: !emailResult.skipped,
     });
@@ -432,8 +440,7 @@ scopedRouter.post('/invites/:inviteId/resend', requireOwner, async (req, res) =>
       data: { token, expiresAt },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const inviteUrl = `${frontendUrl}/invites/${updated.token}`;
+    const inviteUrl = inviteUrlForToken(updated.token);
 
     const inviter = await prisma.user.findUnique({
       where: { id: req.session.userId },
@@ -453,7 +460,7 @@ scopedRouter.post('/invites/:inviteId/resend', requireOwner, async (req, res) =>
       console.error('Resend invite email failed:', emailError);
     }
 
-    res.json({ invite: updated, inviteUrl, emailSent });
+    res.json({ invite: serializeInvite(updated), inviteUrl, emailSent });
   } catch (error) {
     console.error('Resend invite error:', error);
     res.status(500).json({ error: 'Failed to resend invite' });

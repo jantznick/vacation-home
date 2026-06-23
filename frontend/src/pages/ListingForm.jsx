@@ -271,7 +271,7 @@ export default function ListingForm() {
       visitNotes: form.visitNotes || null,
       daysOnMarket: form.daysOnMarket ? Number(form.daysOnMarket) : null,
       photoUrls: form.photoUrls?.length ? form.photoUrls : null,
-      rawScrapedData,
+      ...(rawScrapedData != null ? { rawScrapedData } : {}),
     };
 
     try {

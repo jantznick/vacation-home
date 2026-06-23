@@ -2,13 +2,14 @@
  * Serialize a listing for API responses with derived metrics.
  */
 export function serializeListing(listing) {
+  const { rawScrapedData: _rawScrapedData, ...rest } = listing;
   const listPrice = listing.listPrice != null ? Number(listing.listPrice) : null;
   const soldPrice = listing.soldPrice != null ? Number(listing.soldPrice) : null;
   const acres = listing.acres != null ? Number(listing.acres) : null;
   const sqftLiving = listing.sqftLiving != null ? Number(listing.sqftLiving) : null;
 
   return {
-    ...listing,
+    ...rest,
     listPrice,
     soldPrice,
     acres,
