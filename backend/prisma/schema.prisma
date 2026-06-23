@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RegionStatus {
+  researching
+  shortlisted
+  ruled_out
+  purchased
+}
+
+enum ListingStatus {
+  active
+  pending
+  sold
+  off_market
+  interested
+  passed
+}
+
+enum CommentTargetType {
+  region
+  lake
+  listing
+}
+
+enum SearchMemberRole {
+  owner
+  editor
+  viewer
+}
+
+enum PoiType {
+  current_home
+  work
+  school
+  family
+  other
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String
+  showCompAnalysis Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  comments      Comment[]
+  searchMembers SearchMember[]
+  invitesSent   SearchInvite[] @relation("InvitesSent")
+  searchesCreated Search[]     @relation("SearchesCreated")
+}
+
+model Session {
+  sid    String   @id
+  sess   Json     @db.JsonB
+  expire DateTime @db.Timestamp(6)
+
+  @@map("session")
+  @@index([expire])
+}
+
+model Search {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy     User              @relation("SearchesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  members       SearchMember[]
+  invites       SearchInvite[]
+  pois          PointOfInterest[]
+  regions       Region[]
+  listings      Listing[]
+  pricingModels PricingModel[]
+}
+
+model SearchMember {
+  id       String           @id @default(uuid())
+  searchId String
+  userId   String
+  role     SearchMemberRole @default(editor)
+  joinedAt DateTime         @default(now())
+
+  search Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([searchId, userId])
+  @@index([userId])
+}
+
+model SearchInvite {
+  id          String           @id @default(uuid())
+  searchId    String
+  email       String
+  role        SearchMemberRole @default(editor)
+  token       String           @unique @default(uuid())
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime         @default(now())
+
+  search    Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation("InvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([searchId, email])
+  @@index([token])
+}
+
+model PointOfInterest {
+  id        String   @id @default(uuid())
+  searchId  String
+  type      PoiType  @default(other)
+  label     String
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  latitude  Float?
+  longitude Float?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  search    Search           @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  commutes  ListingCommute[]
+
+  @@index([searchId])
+}
+
+model Region {
+  id                 String       @id @default(uuid())
+  searchId           String
+  name               String
+  slug               String
+  description        String?
+  centerAddress      String?
+  latitude           Float?
+  longitude          Float?
+  driveTimeMinutes   Int?
+  driveDistanceMiles Float?
+  radiusMiles        Float?
+  pros               String?
+  cons               String?
+  overallScore       Int?
+  status             RegionStatus @default(researching)
+  notes              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  search   Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  lakes    Lake[]
+  listings Listing[]
+
+  @@unique([searchId, slug])
+  @@index([searchId])
+}
+
+model Lake {
+  id           String   @id @default(uuid())
+  name         String
+  acreage      Float?
+  maxDepthFeet Float?
+  avgDepthFeet Float?
+  waterClarity String?
+  edgeType     String?
+  notes        String?
+  dnrSourceUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  regionId String
+  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  listings Listing[]
+
+  @@index([regionId])
+}
+
+model Listing {
+  id                 String        @id @default(uuid())
+  searchId           String
+  sourceUrl          String?
+  sourceSite         String?
+  mlsNumber          String?
+  status             ListingStatus @default(active)
+  address            String?
+  city               String?
+  state              String?       @default("WI")
+  zip                String?
+  latitude           Float?
+  longitude          Float?
+  driveTimeMinutes   Int?
+  driveDistanceMiles Float?
+  listPrice          Int?
+  soldPrice          Int?
+  isVacantLot        Boolean       @default(false)
+  bedrooms           Float?
+  bathrooms          Float?
+  sqftLiving         Int?
+  sqftLot            Int?
+  acres              Float?
+  yearBuilt          Int?
+  waterfront         Boolean       @default(false)
+  waterfrontType     String?
+  pros               String?
+  cons               String?
+  notes              String?
+  interestLevel      Int?
+  visited            Boolean       @default(false)
+  visitNotes         String?
+  listingDate        DateTime?
+  daysOnMarket       Int?
+  photoUrls          Json?         @db.JsonB
+  rawScrapedData     Json?         @db.JsonB
+  fetchedAt          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  search   Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  regionId String
+  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  lakeId String?
+  lake   Lake?   @relation(fields: [lakeId], references: [id], onDelete: SetNull)
+
+  snapshots ListingSnapshot[]
+  commutes  ListingCommute[]
+
+  @@index([searchId])
+  @@index([regionId])
+  @@index([lakeId])
+  @@index([isVacantLot])
+  @@index([status])
+}
+
+model ListingCommute {
+  id                 String   @id @default(uuid())
+  listingId          String
+  poiId              String
+  driveTimeMinutes   Int?
+  driveDistanceMiles Float?
+  calculatedAt       DateTime @default(now())
+
+  listing Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  poi     PointOfInterest @relation(fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, poiId])
+  @@index([listingId])
+  @@index([poiId])
+}
+
+model ListingSnapshot {
+  id           String         @id @default(uuid())
+  listPrice    Int?
+  soldPrice    Int?
+  status       ListingStatus?
+  daysOnMarket Int?
+  capturedAt   DateTime       @default(now())
+
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([capturedAt])
+}
+
+model Comment {
+  id         String            @id @default(uuid())
+  body       String
+  targetType CommentTargetType
+  targetId   String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([userId])
+}
+
+model PricingModel {
+  id          String    @id @default(uuid())
+  searchId    String
+  name        String
+  description String?
+  features    Json      @db.JsonB
+  algorithm   String    @default("linear_regression")
+  modelData   Json?     @db.JsonB
+  sampleCount Int?
+  trainedAt   DateTime?
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  search Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@index([searchId])
+}

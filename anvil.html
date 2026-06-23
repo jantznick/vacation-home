@@ -1,0 +1,665 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="https://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="content-type" content="text/html;charset=utf-8" />
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-EHDMSRCYK1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-EHDMSRCYK1');
+    </script>
+
+    <link href="https://apps.dnr.wi.gov/dnrexternalbranding/V01/favicon.ico" type="image/x-icon" rel="icon" /><link href="https://apps.dnr.wi.gov/dnrexternalbranding/V01/favicon.ico" type="image/x-icon" rel="shortcut icon" /><title>
+	Wisconsin Lakes
+</title>
+<!-- BEGIN global_head.inc ( /dnrexternalbranding/v01/includes/global_head.inc ) -->
+<!-- **************************************** -->
+<!-- C -->
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+
+
+<!-- C -->
+<link href="../Content/CSS/globalSiteAll_v2.14.3-f20.css" type="text/css" rel="stylesheet" media="screen" />
+<!-- A -->
+<link href="../Content/CSS/DNRtopic.css" type="text/css" rel="stylesheet" media="screen" />
+<!-- B -->
+<!--<link href="../Content/CSS/DNRtopic_mobile-f20.css" type="text/css" rel="stylesheet" media="screen" />-->
+<link href="../Content/CSS/DNRtopic_HeadFootMods.css" type="text/css" rel="stylesheet" media="screen" />
+
+<!-- C -->
+<script src="../Content/JS/scripts/globalSiteAll_v1.8.5-f20.js"  type="text/javascript"  ></script>
+<!-- B -->
+<!--<script src="../Content/JS/DNRtopic_mobile-f20.js"       type="text/javascript"  ></script>-->
+<!-- **************************************** -->
+<!-- END global_head.inc ( /dnrexternalbranding/v01/includes/global_head.inc ) -->
+
+
+    
+    
+    
+    
+    
+    
+    <style type="text/css">
+        .cpHeader {
+            background-color: #719DDB;
+            color: White;
+            height: 18px;
+            padding: 4px;
+            font: bold 12px auto Verdana;
+            width: 60%;
+        }
+
+        .threeCol {
+            float: left;
+            width: 30%;
+            margin-bottom: 30px;
+        }
+
+        .multiColList {
+            float: left;
+            width: 10em;
+        }
+
+        .oligo {
+            color: Blue;
+        }
+
+        .TSIHeader {
+            background-color: #66ccff;
+        }
+
+        .meso {
+            color: Aqua;
+        }
+
+        .eutro {
+            color: Green;
+        }
+
+        .hyperEutro {
+            color: Darkgreen;
+        }
+
+        .breadCrumb {
+            font-size: 70%;
+        }
+
+        .filteringNav {
+            font-size: 75%;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+        }
+
+        .pagingFirstNextLast {
+            float: left;
+            text-align: center;
+            width: 18%;
+        }
+
+        .pagingFirstNextLast14 {
+            float: left;
+            text-align: center;
+            width: 14%;
+        }
+
+        .pagingFirstNextLast15 {
+            float: left;
+            text-align: center;
+            width: 15%;
+        }
+
+        .pagingPrev {
+            float: left;
+            border-right: solid 1px Silver;
+            text-align: center;
+            width: 18%;
+        }
+
+        .pagingPrev27 {
+            float: left;
+            border-right: solid 1px Silver;
+            text-align: center;
+            width: 27%;
+        }
+
+        .pagingPrev40 {
+            float: left;
+            border-right: solid 1px Silver;
+            text-align: center;
+            width: 40%;
+        }
+
+        .pagingPrev15 {
+            float: left;
+            border-right: solid 1px Silver;
+            text-align: center;
+            width: 15%;
+        }
+
+        .alphaSelected {
+            background-color: Yellow;
+        }
+
+        .speciesBox {
+            border: solid 1px Silver;
+            padding: 1%;
+            width: 60%;
+        }
+
+        .speciesImage {
+            padding-left: 1%;
+            float: right;
+        }
+
+        .tableLeft {
+            text-align: left;
+        }
+
+        .divfloatLeft {
+            float: left;
+        }
+
+        .lakeOrgLink {
+            background-color: Yellow;
+            padding: 10px;
+            color: Black;
+            text-decoration: none;
+            border: solid 1px gray;
+        }
+
+        .insideBullets {
+            list-style-position: inside;
+        }
+
+        .hiddenTextBox {
+            display: none;
+            visibility: hidden;
+        }
+
+        .fishBullets {
+            margin-left: 15px;
+        }
+
+        .strongRed {
+            margin-left: 15px;
+        }
+
+        .smallDisclaimer {
+            font-size: small;
+            font-style: italic;
+        }
+
+        .grayHeader {
+            background-color: #EFEFEF;
+        }
+
+        .dashboard {
+            border-bottom: solid 1px black;
+            padding: 5px;
+        }
+    </style>
+    <script type="text/javascript">
+        function hideImg() {
+            var pics = document.getElementsByName("pics");
+            var checked = document.getElementById("displaypics").checked;
+            for (var i = 0; i < pics.length; i++) {
+                if (checked == false) {
+                    pics[i].style.display = "none";
+                }
+                else {
+                    pics[i].style.display = "block";
+                }
+            }
+        }
+    </script>
+    </head>
+
+
+    <body id="topic">
+        <form name="aspnetForm" method="post" action="./LakeDetail.aspx?wbic=968800" id="aspnetForm" data-ajax="false" class="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwULLTE1ODA4ODIxNzUPZBYCZg9kFgICAQ9kFhBmDxYCHgRUZXh0BQ9XaXNjb25zaW4gTGFrZXNkAgcPFgIeB1Zpc2libGVoFgICAQ8WAh8ABQ9XaXNjb25zaW4gTGFrZXNkAggPFgIfAWhkAgkPFgIfAWgWBAIBDxYCHwAFD1dpc2NvbnNpbiBMYWtlc2QCAw9kFgJmDxYEHwAFgAE8dWw+PGxpPjxhIGhyZWY9J2h0dHA6Ly9kbnIud2kuZ292L3RvcGljL0xhbmRzL25hdHVyYWxhcmVhcy9pbmRleC5hc3A/U05BPTQ0OSc+QW52aWwgTGFrZSBUcmFpbCBTdGF0ZSBOYXR1cmFsIEFyZWE8L2E+PC9saT48L3VsPh8BZ2QCDQ9kFgICAQ8WAh8ABYoBPHNwYW4gY2xhc3M9J2JyZWFkQ3J1bWInPjxhIGhyZWY9J0RlZmF1bHQuYXNweCc+RmluZCBBIExha2U8L2E+ID4gPGEgaHJlZj0nUmVzdWx0cy5hc3B4P2xvY2F0aW9uPTY0Jz4gVmlsYXMgQ291bnR5PC9hPiA+IEFudmlsIExha2U8L3NwYW4+ZAIPDxYCHwAFCkFudmlsIExha2VkAhEPFgIfAWhkAhUPZBYIAgEPFgIfAWhkAg4PZBYEZg8WAh8ABaABPGEgaHJlZj0naHR0cHM6Ly93d3cudXdzcC5lZHUvY25yLWFwL1VXRVhMYWtlcy9QYWdlcy9vcmdhbml6YXRpb25zL2xha2VsaXN0L2RlZmF1bHQuYXNweD93YmljPTk2ODgwMCcgcmVsPSdleHRlcm5hbCc+QW52aWwgTGFrZSBBc3NvY2lhdGlvbiBbZXhpdCBETlJdPC9hPjxiciAvPmQCAQ8WAh8ABaABPGEgaHJlZj0naHR0cHM6Ly93d3cudXdzcC5lZHUvY25yLWFwL1VXRVhMYWtlcy9QYWdlcy9vcmdhbml6YXRpb25zL2xha2VsaXN0L2RlZmF1bHQuYXNweD93YmljPTk2ODgwMCcgcmVsPSdleHRlcm5hbCc+QW52aWwgTGFrZSBBc3NvY2lhdGlvbiBbZXhpdCBETlJdPC9hPjxiciAvPmQCDw9kFgICBQ8WAh8ABbcBPGxpPjxhIGhyZWY9J2h0dHBzOi8vd3d3LnV3c3AuZWR1L2Nuci1hcC9VV0VYTGFrZXMvUGFnZXMvb3JnYW5pemF0aW9ucy9sYWtlbGlzdC9kZWZhdWx0LmFzcHg/d2JpYz05Njg4MDAnIHJlbD0nZXh0ZXJuYWwnPkxha2UgT3JnYW5pemF0aW9uIFtleGl0IEROUl08L2E+IC0gQW52aWwgTGFrZSBBc3NvY2lhdGlvbjwvbGk+ZAIQDxYCHwAF4gU8cCBjbGFzcz0nZm9vdG5vdGUnIGlkPSdib2F0aW5nb3Jkcyc+PHN0cm9uZz4qKiBBYm91dCBCb2F0aW5nIE9yZGluYW5jZXM6PC9zdHJvbmc+IEJlZm9yZSBib2F0aW5nIG9uIGFuIHVuZmFtaWxpYXIgV2lzY29uc2luIHdhdGVyd2F5cyBjaGVjayBmb3IgYSBzaWduIGF0IHRoZSBwdWJsaWMgYm9hdCBsYW5kaW5nIHRvIGRldGVybWluZSBpZiB0aGVyZSBhcmUgbG9jYWwgcmVndWxhdGlvbnMgKG1vcmUgcmVzdHJpY3RpdmUgdGhhbiBzdGF0ZSBsYXcpIHdoaWNoIG1heSBhcHBseSBvbiB0aGF0IHdhdGVyYm9keS4gQWxzbyBiZSBzdXJlIHRvIHJldmlldyB0aGUgZG9jdW1lbnQgPGEgaHJlZj0naHR0cHM6Ly93aWRuci53aWRlbi5uZXQvcy9wc253YjJsbHg5L2JvYXRyZWd1bGF0aW9ucyc+V2lzY29uc2luIEJvYXRpbmcgUmVndWxhdGlvbnM8L2E+IHRvIGxlYXJuIGFib3V0IHN0YXRld2lkZSByZWd1bGF0aW9ucy4gVGhlcmUgbWF5IGJlIGEgZGVsYXkgYmV0d2VlbiB0aGUgdGltZSBhbiBvcmRpbmFuY2UgaXMgcGFzc2VkIGFuZCB0aGUgdGltZSBpdCBnZXRzIGludG8gb3VyIGRhdGFiYXNlLiA8c3BhbiBjbGFzcz0nc3Ryb25nUmVkJz5UaGVyZWZvcmUsIHRoZSBvbmx5IHdheSB0byBrbm93IGZvciBzdXJlIGlmIGEgd2F0ZXIgYm9keSBoYXMgYW4gb3JkaW5hbmNlIGluIGVmZmVjdCBpcyB0byBsb29rIGZvciBhIHNpZ24gcG9zdGVkIGF0IGEgcHVibGljIGJvYXQgbGFuZGluZy4gPC9zcGFuPjwvcD5kZKugbK2ejQmyZ0rZT6Entx38cgAC8bHoLWMlr8SyGqdN" />
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="76C0B672" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAANuT+3H5cBFf9vRAgzaMZvlt0GqqGmTunmU8BFOEDL5JKmWJ8rYvCIRwecByvlZSQc2k1fqNc0Z/yHA8X+yJWSOp8OUdHT+nMR1f2B+NMGgyQ==" />
+
+             
+
+                    <!-- BEGIN topicheader.inc ( /includes/topicheader.inc ) -->
+                    <div id="a1" class="a1z">
+<div id="a2" class="a2z">
+<div id="a3" class="a3z">
+<div id="menuBarz" class="menuBar">
+<div id="dnrlogo">
+<a href="https://dnr.wisconsin.gov/" title="go to the Wisconsin DNR Homepage"><img id="dnrLogoH" src="//dnr.wisconsin.gov/sites/default/files/dnr-circle-logo-no-text-heavy-border.png" height="37" alt="go to the Wisconsin DNR homepage" class="nB" /></a>
+</div>
+
+<div class="menuConD-2020-redesign">
+Wisconsin Department of Natural Resources
+</div>
+
+<span id="menuConM"><a id="menuB" class="menuBlue" onclick="vtoggle(&#39;menu&#39;)">Menu</a><a id="searchB" class="menuOrange" onclick="vtoggle(&#39;search&#39;)">Search</a><a id="helpB" class="menuGreen" onclick="vtoggle(&#39;help&#39;)">Help</a></span>
+<span id="menuConD">
+<a id="but_business" class="menuButton" href="javascript:void(0)" onclick="return buttonclick(event, 'business_menu');"  onmouseover="return buttonMouseover(event, 'business_menu')">Business</a>
+<a id="but_permit" class="menuButton" href="javascript:void(0)" onclick="return buttonclick(event, 'permit_menu');"  onmouseover="return buttonMouseover(event, 'permit_menu')">Licenses &amp; Regulations</a>
+<a id="but_recreation" class="menuButton" href="javascript:void(0)" onclick="return buttonclick(event, 'recreation_menu');"  onmouseover="return buttonMouseover(event, 'recreation_menu')">Recreation</a>
+<a id="but_protection" class="menuButton" href="javascript:void(0)" onclick="return buttonclick(event, 'protection_menu');"  onmouseover="return buttonMouseover(event, 'protection_menu')">Env. Protection</a>
+<a id="but_support" class="menuButton" href="javascript:void(0)" onclick="return buttonclick(event, 'support_menu');"  onmouseover="return buttonMouseover(event, 'support_menu')">Contact</a>
+<a id="but_joinDNR" class="menuButton" href="javascript:void(0)" onclick="return buttonclick(event, 'join_menu');"  onmouseover="return buttonMouseover(event, 'join_menu')">Join DNR</a>
+</span>
+</div>
+
+<div id="search">
+ 
+</div>
+</div>
+</div>
+</div>
+
+<div id="spacer" style="height:50px;">&nbsp;</div>
+
+<!-- ============================================= -->
+
+
+<!-- End Global Header -->
+
+
+<!-- ============================================= -->
+
+
+
+
+
+
+                    <!-- END topicheader.inc ( /includes/topicheader.inc ) -->
+
+                    <div id="pagewrapper">
+                        <div id="canvas">
+                            <div id="maincontent">
+                                <div id="contentside">
+                                    <!-- ===================================== -->
+                                    <!-- Optional Feature Spot Location -->
+                                    <!-- ===================================== -->
+                                    <div class="featurespot">
+                                        
+                                        
+                                    Lake Name:<br />
+                                        <input name="ctl00$txtName" type="text" id="ctl00_txtName" />
+                                        <input type="submit" name="ctl00$btnSubmit" value="Go!" id="ctl00_btnSubmit" />
+                                        <br />
+                                        <br />
+                                        
+                                    </div>
+                                    <!-- end feature spot -->
+                                    <!-- ============================================= -->
+                                    <!-- Topic Title Bar - Link to Topic Landing Page -->
+                                    <!-- ============================================= -->
+                                    
+                                    <div class="topictitle">
+                                        <a href="/lakes/">Lakes</a>
+                                        <!-- ============================================= -->
+                                        <!-- Topic Top Tasks Menu, Maximum is 4 Items -->
+                                        <!-- ============================================= -->
+                                    </div>
+                                    
+                                    <div id="tasknav" class="noprint">
+                                        <dl>
+                                            <dt><a href="https://apps.dnr.wi.gov/lakes/lakepages/Search.aspx">Find</a></dt>
+                                            <dd>a lake.</dd>
+                                        </dl>
+                                    </div>
+                                    
+                                    <div class="featurespot">
+                                        
+                                    </div>
+                                    <!-- end tasknav -->
+                                    <!-- ============================================== -->
+                                    <!-- Topic [Local, Site] Navigation 5 link maximum -->
+                                    <!-- ============================================== -->
+                                    <!-- begin local nav -->
+                                    
+                                    
+                                    
+                                    <!-- end local nav -->
+                                    <!-- ===================================== -->
+                                    <!-- Optional Feature Spot Location -->
+                                    <!-- ===================================== -->
+                                    <!-- feature spot images and graphics must be exactly 218 pixels wide -->
+                                    <div class="featurespot">
+                                        
+    
+
+                                        
+                                    </div>
+                                    
+                                    <!-- end featurespot -->
+                                    <!-- ================================================ -->
+                                    <!-- Topic Content Page Sidebar Contact Information   -->
+                                    <!-- ================================================ -->
+                                    
+                                    
+                                    <dl class="contactinfo">
+                                        <dt>Contact information</dt>
+                                        <dd>
+                                            For information on Lakes in Wisconsin, contact: </dd>
+                                        <dd class='indent1'><a href='mailto:dnrlakeb@wisconsin.gov' title='email link'>DNR Lake</a><br />Division of Water<br />Bureau of Water Quality<br /></dd>
+                                        <dd class='indent1'><a href='/lakes/contacts/ContactsByCounty.aspx?location=64' title='web link'>DNR Contacts for Anvil Lake</a><br /><br /><a href='https://www.uwsp.edu/cnr-ap/UWEXLakes/Pages/organizations/lakelist/default.aspx?wbic=968800' rel='external'>Anvil Lake Association [exit DNR]</a><br /><br />
+                                        
+                                    </dl>
+                                    
+                                </div>
+                                <!-- end contentside float -->
+                                <!-- ===================================== -->
+                                <!-- |         MAIN CONTENT BEGIN        | -->
+                                <!-- ===================================== -->
+                                
+    <span class='breadCrumb'><a href='Default.aspx'>Find A Lake</a> > <a href='Results.aspx?location=64'> Vilas County</a> > Anvil Lake</span>
+
+                                
+                                <h1>
+                                    
+                                    Anvil Lake
+                                    
+                                </h1>
+                                
+                                
+                                
+                                
+                                
+    
+    <!--nav bar-->
+    
+    <div class="tabber">
+        <div class="tabbertab">
+            <ul class="tabbernav">
+                <li class='tabberactive'><a class="noDecor" href='LakeDetail.aspx?wbic=968800'>Overview</a></li>
+                <li class='tabbernav'><a class="noDecor" href='LakeDetail.aspx?wbic=968800&page=map'>Map</a></li>
+                <li class='tabbernav'><a class="noDecor" href='LakeDetail.aspx?wbic=968800&page=facts'>Facts & Figures</a></li>
+                <li class='tabbernav'><a class="noDecor" href='LakeDetail.aspx?wbic=968800&page=more'>More</a></li>
+            </ul>
+        </div>
+    </div>
+     
+    <!-- /navbar -->
+    <div id="ctl00_LeftPageContent_divOverview">
+        <p>
+            Anvil Lake is a 377 acre lake located in Vilas County.  It has a maximum depth of 32 feet.   Visitors have access to the lake from public boat landings.  Fish include Panfish, Smallmouth Bass, Northern Pike and Walleye.  The lake's water is moderately clear.  
+        </p>
+        
+        
+
+        <br />
+        
+        <h3>Features
+            
+            <img src="https://apps.dnr.wi.gov/dnrexternalbranding/V01/images/icons/boatlaunch.gif" alt="boating icon" width="25"
+                class="transparent" />
+            
+            <img src="https://apps.dnr.wi.gov/dnrexternalbranding/V01/images/icons/hiking.gif" alt="public lands icon" width="25"
+                class="transparent" />
+            
+        </h3>
+        
+        <ul>
+            
+            <li><a href='LakeDetail.aspx?wbic=968800&page=boating'>Boat
+            Landings (2)</a> </li>
+            
+            <li><a href='LakeDetail.aspx?wbic=968800&page=parks'>Public
+            lands or parks within 1000 feet of the lake (2)</a> </li>
+            
+        </ul>
+
+        
+
+        <br />
+        <br />
+        <h3>Fish</h3><ul class='fishBullets'><li>Walleye (Common)</li><li>Panfish (Present)</li><li>Smallmouth Bass (Present)</li><li>Northern Pike (Present)</li></ul>
+        
+        <!--end fish section-->
+
+        <br />
+        <h3>Before You Go
+            </h3>
+            
+            <ul>
+                
+                <li><a rel='external' href="LakeDetail.aspx?wbic=968800&page=ordinances">Local
+                    Boating Ordinances</a>
+                </li>
+                
+                <li><a rel='external' href="https://apps.dnr.wi.gov/fishconsumptionadvisoryquery/">Fish Consumption Advisories</a></li>
+                
+                
+                <li>
+
+                    
+
+                    <a rel='external' href="https://apps.dnr.wi.gov/fisheriesmanagement/Public/LakeRegulation/Details?WBIC=968800&WBIC_NAME=Anvil Lake">
+                        
+                    Fishing Regulations
+                    </a></li>
+            </ul>
+            <br />
+            <h3>Maps</h3>
+
+                
+                <ul>
+                    
+                    <li><a rel='external' href='https://apps.dnr.wi.gov/swims/Documents/DownloadDocument?id=29815323'>Contour (Bathymetric) Map</a></li>
+                    
+                    <li><a href='https://dnrmaps.wi.gov/H5/?viewer=SWDV&param=LAKE,WATERBODY_WBIC,968800' target='_blank'>Interactive Map</a> </li>
+                    
+                </ul>
+    </div>
+    
+    
+    
+    
+    
+    
+    
+    
+    <br />
+    
+    
+    
+    
+    
+    
+    
+
+    <p class='footnote' id='boatingords'><strong>** About Boating Ordinances:</strong> Before boating on an unfamiliar Wisconsin waterways check for a sign at the public boat landing to determine if there are local regulations (more restrictive than state law) which may apply on that waterbody. Also be sure to review the document <a href='https://widnr.widen.net/s/psnwb2llx9/boatregulations'>Wisconsin Boating Regulations</a> to learn about statewide regulations. There may be a delay between the time an ordinance is passed and the time it gets into our database. <span class='strongRed'>Therefore, the only way to know for sure if a water body has an ordinance in effect is to look for a sign posted at a public boat landing. </span></p>
+    <br />
+    <br />
+    <br />
+    
+    </div>
+
+
+                                
+                                <!-- ==================================================== -->
+                                <!-- Topic Content Page Main Content Area Contact Information  -->
+                                <!-- ==================================================== -->
+
+                                <!-- end Main Content Area Contact Information  -->
+                                
+                            </div>
+                            <!-- end maincontent -->
+                            <div id="sidebar">
+                            </div>
+                            <!-- end sidebar -->
+                        </div>
+                        <!-- end canvas -->
+                    </div>
+
+                    <!-- end pagewrapper -->
+                    <!-- BEGIN topicfooter.inc ( /includes/topicfooter.inc ) -->
+                    <div class="breakAll"></div>
+
+<!-- Begin Topic Footer -->
+<div id="footer">
+  <div id="center990f">
+
+    <div id="footerTop">
+      <div id="floater">
+        TOPICS
+        <ul>
+          <li class="sNLB">
+            <a title="Environmental Protection" href="/topic/environmentProtect.html">Environmental Protection</a>
+          </li>
+          <li class="sNLB">
+            <a title="Forest Management" href="/topic/forestry.html">Forest Management</a>
+          </li>
+          <li class="sNLB">
+            <a title="Lands and Activities" href="/topic/land.html">Lands and Activities</a>
+          </li>
+          <li class="sNLB">
+            <a title="Water Resources" href="/topic/water.html">Water Resources</a>
+          </li>
+        </ul>
+        <!-- JOIN
+<ul>
+<li class="sNLG"><a title="Volunteer Opportunities" href="/volunteer/">Volunteer Opportunities</a></li>
+<li class="sNLG"><a title="Employment" href="/employment/">Employment</a></li>
+<li class="sNLG"><a href="/volunteer/waterPublicLands/Lakes.html" title="Water Monitors">Water Monitors</a></li>
+</ul>
+ -->
+        <br />LEARN
+        <ul>
+          <li class="sNLY">
+            <a title="News" href="/news/">News</a>
+          </li>
+          <li class="sNLY">
+            <a title="News" href="/about/">About DNR</a>
+          </li>
+          <!-- <li class="sNLB"><a title="Safety Classes" href="https://jc.activeoutdoorsolutions.com/wise_student/app/goHome.do">Safety Classes</a></li> -->
+          <li class="sNLY">
+            <a title="Workshops &amp; Clinics" href="/education/workshops.html">Workshops &amp; Clinics</a>
+          </li>
+        </ul>
+      </div>
+
+      <div id="floater2">
+        CONTACT
+        <ul>
+          <li class="sNLG">
+            <a title="Hotlines" href="/Contact/TollFree.html">Hotlines</a>
+          </li>
+          <li class="sNLG">
+            <a title="Staff Directory" href="/staffdir/_newsearch/contactsearchext.aspx">Staff Directory</a>
+          </li>
+          <li class="sNLG">
+            <a title="Office Locations" href="/Contact/officelocations.html">Office Locations</a>
+          </li>
+          <li class="sNLG">
+            <a title="Feedback" href="/feedback/">Feedback</a>
+          </li>
+        </ul>
+        <br />LICENSES
+        <ul>
+          <li class="sNLO">
+            <a title="Non-resident" href="/Permits/Nonresidentlicense.html">Non-resident</a>
+          </li>
+          <li class="sNLO">
+            <a title="Resident" href="/permits/residentlicense.html">Resident</a>
+          </li>
+          <li class="sNLO">
+            <a title="Sales Locations" href="/Permits/CSRSP/LicenseAgents.aspx">Sales Locations</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- 
+<div id="WI">
+<a href="https://apps.dnr.wi.gov" title="Go to Wisconsin.gov"><img id="wigov" src="/dnrexternalbranding/V01/home/images/wigovD.gif" alt="Link to State of Wisconsin site" class="nBWI" /></a>
+</div>
+<a href="/" title="Go to the Wisconsin Department of Natural Resources homepage"><img src="/home/images/DNRLOGO_FooterT.gif" alt="Wisconsin Department of Natural Resources" width="97" height="87" class="nBDNR" /></a>
+<a href="http://dnr.wi.gov/"><img src="/images/DNR150x104.png" alt="Wisconsin Department of Natural Resources" height="104" width="150" class="nBDNR" /></a>
+<a href="http://dnr.wi.gov/"><img src="/home/images/DNRLOGO_FooterWText.jpg" alt="Wisconsin Department of Natural Resources" width="97" height="87" class="nBDNR" /></a>
+<a href="http://dnr.wi.gov/"><img src="/home/images/DNRLogo_Footer.jpg" alt="Wisconsin Department of Natural Resources" width="97" height="70" class="nBDNR" /></a>
+<a title="Open the Outdoors" href="/topic/openoutdoors/"><img src="/images/logos/opentheoutdoorsS.gif" alt="Open the Outdoors" width="12" height="12" class="nB" />&nbsp;Open the Outdoors</a>
+onmouseover="high(OBJ('magicon'),0)"  onmouseout="high(OBJ('magicon'),1)"
+// -->
+
+    <div id="chatMagEek">
+      <script type="text/javascript">document.write(ChAt)</script>
+      <a href="/eek/" title="Go to the youth educational site EEK!">
+        <img id="eekicon" src="//apps.dnr.wi.gov/dnrexternalbranding/V01/images/eeklogo.gif" class="nBEek" alt="Link to EEK!" />
+      </a>
+      <a href="/wnrmag/" title="Go to Wisconsin Natural Resources Magazine">
+        <img id="magicon" src="//apps.dnr.wi.gov/dnrexternalbranding/V01/images/magazine.jpg" class="nBMag" alt="Link to Wisconsin Natural Resources Magazine" />
+      </a>
+    </div>
+
+    <div id="connectWIDNR">
+      <p>
+        <a onmouseover="bump(OBJ('lOpen'),0)" onmouseout="bump(OBJ('lOpen'),1)" href="/topic/openoutdoors/" title="Open the Outdoors">
+          <img id="lOpen" src="/dnrexternalbranding/V01/images/icons/opentheOutdoors.gif" width="40" class="nBX" height="40" alt="Open the Outdoors" />
+        </a>
+        <a onmouseover="bump(OBJ('lLink'),0)" onmouseout="bump(OBJ('lLink'),1)" href="https://www.linkedin.com/company/wisconsin-department-of-natural-resources" title="Follow us on LinkedIn">
+          <img id="lLink" src="/images/logos/linkedin_40x40.png" width="40" class="nBX" height="40" alt="Follow us on LinkedIn" />
+        </a>
+        <a onmouseover="bump(OBJ('lFace'),0)"  onmouseout="bump(OBJ('lFace'),1)" href="https://facebook.com/WIDNR"  title="Find us on Facebook">
+          <img id="lFace" src="/dnrexternalbranding/V01/images/icons/circular/facebook.gif" class="nBX" width="40" height="40" alt="Find us on Facebook" />
+        </a>
+        <a onmouseover="bump(OBJ('lIng'),0)"  onmouseout="bump(OBJ('lIng'),1)" href="https://www.instagram.com/wi_dnr/" title="Follow us on Instagram">
+          <img id="lYou" src="/images/logos/instagram_40x40.png" class="nBX" width="40" height="40" alt="Watch us on YouTube" />
+        </a>
+        <a onmouseover="bump(OBJ('lTwit'),0)"  onmouseout="bump(OBJ('lTwit'),1)" href="https://twitter.com/WDNR" title="Follow us on Twitter">
+          <img id="lTwit" src="/dnrexternalbranding/V01/images/icons/circular/twitter.gif" width="40" class="nBX" height="40" alt="Follow us on Twitter" />
+        </a>
+        <a onmouseover="bump(OBJ('lYou'),0)"  onmouseout="bump(OBJ('lYou'),1)" href="https://www.youtube.com/user/WIDNRTV" title="Watch us on YouTube">
+          <img id="lYou" src="/images/logos/youtube_40x40.png" class="nBX" width="40" height="40" alt="Watch us on YouTube" />
+        </a>
+        <a onmouseover="bump(OBJ('lFlic'),0)"  onmouseout="bump(OBJ('lFlic'),1)" href="http://www.flickr.com/photos/widnr" title="Look at our photos on Flickr">
+          <img id="lFlic" src="/images/logos/flickr_40x40.png" width="40" class="nBX" height="40" alt="Look at our photos on Flickr" />
+        </a>
+        <a onmouseover="bump(OBJ('lPint'),0)"  onmouseout="bump(OBJ('lPint'),1)" href="http://pinterest.com/wdnr/"  title="Discover our pins on Pinterest">
+          <img id="lPint" src="/images/logos/pinterest_40x40.png" class="nBX" width="40" height="40" alt="Find us on Pinterest" />
+        </a>
+        <a onmouseover="bump(OBJ('lRSS'),0)"  onmouseout="bump(OBJ('lRSS'),1)" href="/rss/" title="Subscribe to our RSS feeds">
+          <img id="lRSS" src="/images/logos/rsslogo.gif" width="40" class="nBX" height="40" alt="RSS feeds" />
+        </a>
+        <a style="margin:0;padding:0;border:none;" onmouseover="bump(OBJ('lGovD'),0)"  onmouseout="bump(OBJ('lGovD'),1)" href="#" onclick="window.open('https://public.govdelivery.com/accounts/WIDNR/subscriber/new','popup','width=725,height=500,left=25,top=25,location=no,resizable=yes,scrollbars=yes,status=yes');return false;" title="Subscribe to updates for DNR topics">
+          <img id="lGovD" width="40" height="40" src="/images/logos/govdelivery_40x40.png" class="nBX" alt="Subscribe to updates for DNR topics" />
+        </a>
+        <!--<a style="margin:0;padding:0;border:none;" onmouseover="bump(OBJ('lApps'),0)"  onmouseout="bump(OBJ('lApps'),1)" href="/mobileapps/" title="Download our Mobile Apps">
+          <img id="lApps" src="/images/icons/download_apps_40x40.png" width="40" class="nBX" height="40" alt="DNR Mobile Apps" />
+        </a>-->
+      </p>
+    </div>
+  </div>
+
+  <div id="fAddress">
+    <p>
+      Wisconsin Department of Natural Resources<span id="fSpacer1">&nbsp;&nbsp;|&nbsp;&nbsp;</span>101 S. Webster Street <span>.</span> PO Box 7921<span id="fSpacer2">&nbsp;&nbsp;|&nbsp;&nbsp;</span>Madison, Wisconsin 53707-7921<br /><br />Call 1-888-936-7463 (TTY Access via relay - 711) from 7 a.m. - 10 p.m.<br /><br />
+      <a title="Site requirements" href="https://dnr.wisconsin.gov/site/">Site requirements</a> | <a title="Accessibility" href="https://dnr.wisconsin.gov/legal/acceptableuse.html#accessibility">Accessibility</a> | <a title="Legal Notices" href="https://dnr.wisconsin.gov/legal/">Legal</a> | <a title="Privacy Notice" href="https://dnr.wisconsin.gov/legal/privacy/">Privacy</a> | <a title="Employee Resources" href="https://dnr.wisconsin.gov/staff/">Employee resources</a> 
+    </p>
+    <a href="https://apps.dnr.wi.gov" title="Go to Wisconsin.gov">
+      <img id="wigov" src="/dnrexternalbranding/V01/home/images/wigovD.gif" width="100" alt="Link to State of Wisconsin site" class="nBWI" />
+    </a>
+  </div>
+</div>
+<!-- End Topic Footer -->
+
+<!-- Begin Google Analytics SSI statement -->
+
+
+<!-- End Google Analytics SSI statement -->
+
+
+                    <!-- END topicfooter.inc ( /includes/topicfooter.inc ) -->
+
+                    </form>
+    </body>
+</html>

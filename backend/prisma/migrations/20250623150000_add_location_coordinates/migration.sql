@@ -1,0 +1,14 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "homeLat" DOUBLE PRECISION,
+ADD COLUMN "homeLng" DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "Region" ADD COLUMN "centerAddress" TEXT,
+ADD COLUMN "latitude" DOUBLE PRECISION,
+ADD COLUMN "longitude" DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "Listing" ADD COLUMN "latitude" DOUBLE PRECISION,
+ADD COLUMN "longitude" DOUBLE PRECISION,
+ADD COLUMN "driveTimeMinutes" INTEGER,
+ADD COLUMN "driveDistanceMiles" DOUBLE PRECISION;

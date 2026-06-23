@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pine-50: #f3f7f4;
+  --color-pine-100: #e3ece6;
+  --color-pine-200: #c8d9ce;
+  --color-pine-300: #9ebbaa;
+  --color-pine-400: #6f9980;
+  --color-pine-500: #4f7d62;
+  --color-pine-600: #3d644e;
+  --color-pine-700: #325040;
+  --color-pine-800: #2a4135;
+  --color-pine-900: #24362d;
+  --color-pine-950: #121d18;
+
+  --color-bark-100: #f5efe9;
+  --color-bark-200: #e8ddd2;
+  --color-bark-300: #d4c2b0;
+  --color-bark-600: #8a6b52;
+  --color-bark-800: #5c4636;
+
+  --color-sand-50: #fdfbf7;
+  --color-sand-100: #f5efe6;
+  --color-ocean-50: #f0f9ff;
+  --color-ocean-100: #e0f2fe;
+  --color-ocean-200: #bae6fd;
+  --color-ocean-300: #7dd3fc;
+  --color-ocean-400: #38bdf8;
+  --color-ocean-500: #0ea5e9;
+  --color-ocean-600: #0284c7;
+  --color-ocean-700: #0369a1;
+  --color-ocean-800: #075985;
+  --color-ocean-900: #0c4a6e;
+  --color-ocean-950: #082f49;
+
+  --color-alpine-50: #f8fafc;
+  --color-alpine-100: #f1f5f9;
+  --color-alpine-200: #e2e8f0;
+  --color-alpine-300: #cbd5e1;
+  --color-alpine-400: #94a3b8;
+  --color-alpine-500: #64748b;
+  --color-alpine-600: #475569;
+  --color-alpine-700: #334155;
+  --color-alpine-800: #1e293b;
+  --color-alpine-900: #0f172a;
+  --color-alpine-950: #020617;
+  --color-ice-400: #38bdf8;
+}
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  @apply bg-pine-50 text-pine-950 antialiased;
+  overflow-x: clip;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+#root {
+  overflow-x: clip;
+}
