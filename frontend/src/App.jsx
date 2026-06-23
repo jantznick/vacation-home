@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyLogin from './pages/VerifyLogin';
 import Searches from './pages/Searches';
 import AcceptInvite from './pages/AcceptInvite';
 import Dashboard from './pages/Dashboard';
@@ -62,6 +63,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/auth/verify" element={<VerifyLogin />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/about" element={<About />} />

@@ -171,8 +171,8 @@ Frontend: http://localhost:5173 (proxies `/api` to backend)
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | Session cookie signing secret (`openssl rand -base64 32`) |
-| `RESEND_API_KEY` | For invites | Resend API key |
-| `RESEND_FROM_EMAIL` | For invites | Verified sender address |
+| `RESEND_API_KEY` | For invites + magic link | Resend API key |
+| `RESEND_FROM_EMAIL` | For invites + magic link | Verified sender address |
 | `GOOGLE_MAPS_API_KEY` | For maps/drive time | Enable Geocoding + Distance Matrix + Directions APIs |
 | `FRONTEND_URL` | Yes (prod) | Frontend origin for CORS/cookies |
 | `PORT` | No | Default `3001` |
@@ -217,7 +217,7 @@ Leave empty locally; Vite proxies to `http://localhost:3001`.
                                         └─────────────┘
 ```
 
-**Auth:** Email/password → `connect.sid` cookie → session row in Postgres. Open registration. Production: `secure` cookies, `sameSite: none`, `trust proxy`.
+**Auth:** Email/password or magic link (6-digit code + email link) → `connect.sid` cookie → session row in Postgres. Open registration. Magic link creates an account if the email is new. Production: `secure` cookies, `sameSite: none`, `trust proxy`. Requires `RESEND_*` for magic link in production.
 
 **Domain concepts**
 
@@ -405,6 +405,9 @@ Base: `/api`. All routes except auth and health need session cookie.
 |---|---|---|
 | POST | `/auth/register` | Body: `{ email, password }` |
 | POST | `/auth/login` | Body: `{ email, password }` |
+| POST | `/auth/magic-link/request` | Body: `{ email }` — sends link + 6-digit code |
+| POST | `/auth/magic-link/verify-code` | Body: `{ email, code }` |
+| POST | `/auth/magic-link/verify-token` | Body: `{ token }` — used by `/auth/verify` page |
 | POST | `/auth/logout` | |
 | GET | `/auth/me` | Current user incl. home fields |
 | PATCH | `/auth/profile` | Body: home address fields; auto-geocode |

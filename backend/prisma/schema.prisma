@@ -46,7 +46,7 @@ enum PoiType {
 model User {
   id               String   @id @default(uuid())
   email            String   @unique
-  password         String
+  password         String?
   showCompAnalysis Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -55,6 +55,19 @@ model User {
   searchMembers SearchMember[]
   invitesSent   SearchInvite[] @relation("InvitesSent")
   searchesCreated Search[]     @relation("SearchesCreated")
+}
+
+model LoginToken {
+  id        String    @id @default(uuid())
+  email     String
+  tokenHash String    @unique
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
 }
 
 model Session {

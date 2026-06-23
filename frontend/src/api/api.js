@@ -33,6 +33,21 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  requestMagicLink: (email) =>
+    request('/auth/magic-link/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  verifyMagicLinkCode: (email, code) =>
+    request('/auth/magic-link/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    }),
+  verifyMagicLinkToken: (token) =>
+    request('/auth/magic-link/verify-token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
 };
