@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { searchesAPI } from '../api/api';
-import { useSearchAPI } from '../hooks/useSearch';
+import { useSearchAPI, searchPath } from '../hooks/useSearch';
 import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
@@ -667,7 +667,23 @@ export default function SearchSettings() {
         />
       )}
 
-      <ZillowPasteImport canEdit={canEdit} />
+      <div className="mt-6 space-y-6">
+        <Card>
+          <h2 className="text-lg font-medium text-pine-900">Pricing models</h2>
+          <p className="mt-1 text-sm text-pine-600">
+            Configure which features power price estimates on listings and the dream estimator.
+            Most searches can use the default.
+          </p>
+          <Link
+            to={searchPath(searchId, '/pricing-models')}
+            className="mt-3 inline-block text-sm font-medium text-pine-700 hover:text-pine-900"
+          >
+            Manage pricing models →
+          </Link>
+        </Card>
+
+        <ZillowPasteImport canEdit={canEdit} />
+      </div>
 
     </div>
   );

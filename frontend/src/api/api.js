@@ -142,6 +142,12 @@ export function createSearchAPI(searchId) {
       },
       geocode: (id) => request(`${base}/listings/${id}/geocode`, { method: 'POST' }),
       driveTime: (id) => request(`${base}/listings/${id}/drive-time`, { method: 'POST' }),
+      refresh: (id) => request(`${base}/listings/${id}/refresh`, { method: 'POST' }),
+      refreshBulk: (body = {}) =>
+        request(`${base}/listings/refresh-bulk`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
     },
     analysis: {
       priceDrops: () => request(`${base}/analysis/price-drops`),
@@ -156,6 +162,11 @@ export function createSearchAPI(searchId) {
         request(`${base}/pricing-models/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
       remove: (id) => request(`${base}/pricing-models/${id}`, { method: 'DELETE' }),
       train: (id) => request(`${base}/pricing-models/${id}/train`, { method: 'POST' }),
+      estimate: (spec) =>
+        request(`${base}/pricing-models/estimate`, {
+          method: 'POST',
+          body: JSON.stringify(spec),
+        }),
       predict: (id, listingId) =>
         request(`${base}/pricing-models/${id}/predict`, {
           method: 'POST',

@@ -13,6 +13,9 @@ import {
 import useSearchAccess from '../hooks/useSearchAccess';
 import usePrimaryPoi from '../hooks/usePrimaryPoi';
 import ListingPrimaryDriveTime from '../components/ListingPrimaryDriveTime';
+import ListingStaleBadge from '../components/ListingStaleBadge';
+import ListingPriceSignal from '../components/ListingPriceSignal';
+import { showError, showSuccess } from '../lib/toast';
 
 export default function Listings() {
   const searchId = useSearchId();
@@ -24,10 +27,13 @@ export default function Listings() {
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [staleCount, setStaleCount] = useState(0);
 
   const regionId = searchParams.get('regionId') || '';
   const isVacantLot = searchParams.get('isVacantLot') || '';
   const status = searchParams.get('status') || '';
+  const needsRefresh = searchParams.get('needsRefresh') || '';
   const sortBy = searchParams.get('sortBy') || 'createdAt';
   const sortDir = searchParams.get('sortDir') || 'desc';
 
@@ -52,11 +58,16 @@ export default function Listings() {
         if (regionId) filters.regionId = regionId;
         if (isVacantLot) filters.isVacantLot = isVacantLot;
         if (status) filters.status = status;
+        if (needsRefresh) filters.needsRefresh = needsRefresh;
         if (sortBy) filters.sortBy = sortBy;
         if (sortDir) filters.sortDir = sortDir;
+        filters.includePriceSignal = 'true';
 
         const data = await api.listings.list(filters);
         setListings(data.listings);
+
+        const staleData = await api.listings.list({ needsRefresh: 'true' });
+        setStaleCount(staleData.listings.length);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -65,7 +76,49 @@ export default function Listings() {
     };
 
     loadListings();
-  }, [api, regionId, isVacantLot, status, sortBy, sortDir]);
+  }, [api, regionId, isVacantLot, status, needsRefresh, sortBy, sortDir]);
+
+  const reloadListings = async () => {
+    const filters = {};
+    if (regionId) filters.regionId = regionId;
+    if (isVacantLot) filters.isVacantLot = isVacantLot;
+    if (status) filters.status = status;
+    if (needsRefresh) filters.needsRefresh = needsRefresh;
+    if (sortBy) filters.sortBy = sortBy;
+    if (sortDir) filters.sortDir = sortDir;
+    filters.includePriceSignal = 'true';
+
+    const [data, staleData] = await Promise.all([
+      api.listings.list(filters),
+      api.listings.list({ needsRefresh: 'true' }),
+    ]);
+    setListings(data.listings);
+    setStaleCount(staleData.listings.length);
+  };
+
+  const handleBulkRefresh = async () => {
+    setRefreshing(true);
+    setError('');
+
+    try {
+      const data = await api.listings.refreshBulk({ staleOnly: true });
+      const { summary } = data;
+      if (summary.total === 0) {
+        showSuccess('No stale listings to refresh.');
+      } else if (summary.failed === 0) {
+        showSuccess(`Refreshed ${summary.succeeded} listing${summary.succeeded === 1 ? '' : 's'}.`);
+      } else {
+        showSuccess(`Refreshed ${summary.succeeded} of ${summary.total}. ${summary.failed} failed.`);
+      }
+
+      await reloadListings();
+    } catch (err) {
+      setError(err.message);
+      showError(err.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const updateFilter = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -83,14 +136,21 @@ export default function Listings() {
         title="Listings"
         description="Individual properties you're tracking — vacant lots and homes with structures."
         actions={canEdit ? (
-          <Link to={searchPath(searchId, '/listings/new')}>
-            <Button>Add listing</Button>
-          </Link>
+          <>
+            {staleCount > 0 && (
+              <Button variant="secondary" onClick={handleBulkRefresh} disabled={refreshing}>
+                {refreshing ? 'Refreshing...' : `Refresh stale (${staleCount})`}
+              </Button>
+            )}
+            <Link to={searchPath(searchId, '/listings/new')}>
+              <Button>Add listing</Button>
+            </Link>
+          </>
         ) : undefined}
       />
 
       <Card className="mb-6">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
           <div>
             <label className="mb-1 block text-sm font-medium text-pine-800">Region</label>
             <select
@@ -127,6 +187,17 @@ export default function Listings() {
               {LISTING_STATUSES.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-pine-800">Freshness</label>
+            <select
+              value={needsRefresh}
+              onChange={(e) => updateFilter('needsRefresh', e.target.value)}
+              className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
+            >
+              <option value="">All listings</option>
+              <option value="true">Needs refresh</option>
             </select>
           </div>
           <div>
@@ -173,9 +244,12 @@ export default function Listings() {
             <ClickableCard key={listing.id} to={searchPath(searchId, `/listings/${listing.id}`)}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-lg font-medium text-pine-900">
-                    {listing.address || 'Untitled listing'}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-medium text-pine-900">
+                      {listing.address || 'Untitled listing'}
+                    </p>
+                    <ListingStaleBadge listing={listing} />
+                  </div>
                   <p className="mt-1 text-sm text-pine-600">
                     {listing.region.name}
                     {listing.lake ? ` · ${listing.lake.name}` : ''}
@@ -190,8 +264,11 @@ export default function Listings() {
                     className="mt-1 text-xs text-pine-500"
                   />
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold text-pine-900">{formatCurrency(listing.listPrice)}</p>
+                <div className="space-y-1 text-right">
+                  <p className="text-lg font-semibold tabular-nums text-pine-900">
+                    {formatCurrency(listing.listPrice)}
+                  </p>
+                  <ListingPriceSignal signal={listing.priceSignal} />
                   {listing.acres && (
                     <p className="text-sm text-pine-600">
                       {listing.acres} acres

@@ -20,6 +20,9 @@ import {
   statusLabel,
   LISTING_STATUSES,
 } from '../lib/format';
+import ListingStaleBadge from '../components/ListingStaleBadge';
+import { formatFetchedAt } from '../lib/listingFreshness';
+import { showError, showSuccess } from '../lib/toast';
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -40,6 +43,7 @@ export default function ListingDetail() {
   const [locationError, setLocationError] = useState('');
   const [geocoding, setGeocoding] = useState(false);
   const [calculatingDriveTime, setCalculatingDriveTime] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { label: primaryPoiLabel } = usePrimaryPoi();
   const originLabel = primaryPoiLabel || 'your primary location';
 
@@ -138,6 +142,37 @@ export default function ListingDetail() {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setError('');
+
+    try {
+      const data = await api.listings.refresh(id);
+      setListing((current) => ({
+        ...current,
+        ...data.listing,
+        region: data.listing.region ?? current?.region,
+        lake: data.listing.lake ?? current?.lake,
+      }));
+
+      if (data.priceChanged || data.statusChanged) {
+        const snapshotData = await api.listings.snapshots(id);
+        setSnapshots(snapshotData.snapshots);
+        showSuccess('Listing refreshed — price or status changed.');
+      } else {
+        showSuccess('Listing refreshed.');
+      }
+
+      const estimateResult = await api.listings.priceEstimate(id).catch(() => null);
+      setPriceEstimate(estimateResult);
+    } catch (err) {
+      setError(err.message);
+      showError(err.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (loading) {
     return <p className="text-pine-600">Loading listing...</p>;
   }
@@ -153,6 +188,11 @@ export default function ListingDetail() {
         description={[listing.city, listing.state, listing.zip].filter(Boolean).join(', ')}
         actions={canEdit ? (
           <>
+            {listing.canRefresh && (
+              <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
+                {refreshing ? 'Refreshing...' : 'Refresh from Zillow'}
+              </Button>
+            )}
             <Link to={searchPath(searchId, `/listings/${id}/edit`)}>
               <Button variant="secondary">Edit</Button>
             </Link>
@@ -171,6 +211,17 @@ export default function ListingDetail() {
         <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {pricingNotice}
         </p>
+      )}
+
+      {listing.canRefresh && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-pine-600">
+          <ListingStaleBadge listing={listing} />
+          {listing.fetchedAt ? (
+            <span>Last refreshed {formatFetchedAt(listing.fetchedAt)}</span>
+          ) : (
+            <span>Not refreshed from Zillow yet</span>
+          )}
+        </div>
       )}
 
       {listing.photoUrls?.length > 0 && (

@@ -20,8 +20,11 @@ import {
 import {
   predictListingPrice,
   retrainAfterListingChange,
+  computeListingPriceSignals,
 } from '../services/pricing/index.js';
 import { previewListingFromUrl } from '../services/ingest/index.js';
+import { refreshListingFromSource } from '../services/listings/refreshFromSource.js';
+import { staleListingCutoff } from '../lib/listingFreshness.js';
 
 const router = express.Router();
 
@@ -47,6 +50,15 @@ function buildListingWhere(searchId, query) {
   }
   if (query.waterfront !== undefined) {
     where.waterfront = query.waterfront === 'true';
+  }
+
+  if (query.needsRefresh === 'true') {
+    const cutoff = staleListingCutoff();
+    where.sourceUrl = { contains: 'zillow.com' };
+    where.OR = [
+      { fetchedAt: null },
+      { fetchedAt: { lt: cutoff } },
+    ];
   }
 
   return where;
@@ -84,10 +96,103 @@ router.get('/', async (req, res) => {
     const sortDir = req.query.sortDir === 'asc' ? 'asc' : 'desc';
     const sorted = sortSerializedListings(serialized, sortBy, sortDir);
 
+    if (req.query.includePriceSignal === 'true') {
+      const signals = await computeListingPriceSignals(searchId, sorted);
+      res.json({
+        listings: sorted.map((listing) => ({
+          ...listing,
+          priceSignal: signals[listing.id] ?? null,
+        })),
+      });
+      return;
+    }
+
     res.json({ listings: sorted });
   } catch (error) {
     console.error('List listings error:', error);
     res.status(500).json({ error: 'Failed to list listings' });
+  }
+});
+
+router.post('/refresh-bulk', async (req, res) => {
+  try {
+    const searchId = searchIdFrom(req);
+    const { listingIds, staleOnly = true } = req.body || {};
+
+    let listings;
+    if (Array.isArray(listingIds) && listingIds.length > 0) {
+      listings = await prisma.listing.findMany({
+        where: {
+          searchId,
+          id: { in: listingIds },
+          sourceUrl: { contains: 'zillow.com' },
+        },
+      });
+    } else {
+      const cutoff = staleListingCutoff();
+      listings = await prisma.listing.findMany({
+        where: {
+          searchId,
+          sourceUrl: { contains: 'zillow.com' },
+          ...(staleOnly
+            ? {
+              OR: [
+                { fetchedAt: null },
+                { fetchedAt: { lt: cutoff } },
+              ],
+            }
+            : {}),
+        },
+        orderBy: { fetchedAt: 'asc' },
+      });
+    }
+
+    const context = {
+      searchId,
+      userId: req.session?.userId ?? null,
+    };
+
+    const results = await Promise.all(
+      listings.map(async (listing) => {
+        try {
+          const refreshed = await refreshListingFromSource(listing, context);
+          return {
+            listingId: listing.id,
+            success: true,
+            listing: refreshed.listing,
+            priceChanged: refreshed.priceChanged,
+            statusChanged: refreshed.statusChanged,
+            warnings: refreshed.warnings,
+          };
+        } catch (error) {
+          return {
+            listingId: listing.id,
+            success: false,
+            error: error.message || 'Refresh failed',
+          };
+        }
+      }),
+    );
+
+    const priceChanges = results.filter(
+      (result) => result.success && (result.priceChanged || result.statusChanged),
+    ).length;
+
+    const succeeded = results.filter((result) => result.success).length;
+    const failed = results.length - succeeded;
+
+    res.json({
+      results,
+      summary: {
+        total: results.length,
+        succeeded,
+        failed,
+        priceChanges,
+      },
+    });
+  } catch (error) {
+    console.error('Bulk refresh listings error:', error);
+    res.status(500).json({ error: error.message || 'Failed to refresh listings' });
   }
 });
 
@@ -333,6 +438,33 @@ router.patch('/:id', async (req, res) => {
   } catch (error) {
     console.error('Update listing error:', error);
     res.status(500).json({ error: 'Failed to update listing' });
+  }
+});
+
+router.post('/:id/refresh', async (req, res) => {
+  try {
+    const searchId = searchIdFrom(req);
+    const listing = await getListingInSearch(searchId, req.params.id);
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    const refreshed = await refreshListingFromSource(listing, {
+      searchId,
+      userId: req.session?.userId ?? null,
+    });
+
+    res.json({
+      listing: refreshed.listing,
+      warnings: refreshed.warnings,
+      pricing: refreshed.pricing,
+      priceChanged: refreshed.priceChanged,
+      statusChanged: refreshed.statusChanged,
+    });
+  } catch (error) {
+    console.error('Refresh listing error:', error);
+    res.status(422).json({ error: error.message || 'Failed to refresh listing' });
   }
 });
 

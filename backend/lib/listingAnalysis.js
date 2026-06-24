@@ -128,7 +128,7 @@ export function metricLabel(metricKey) {
   return metricKey;
 }
 
-export function isCompCandidate(target, candidate) {
+export function isCompCandidate(target, candidate, { requireSameRegion = true } = {}) {
   if (target.id === candidate.id) {
     return false;
   }
@@ -137,7 +137,7 @@ export function isCompCandidate(target, candidate) {
     return false;
   }
 
-  if (target.regionId !== candidate.regionId) {
+  if (requireSameRegion && target.regionId !== candidate.regionId) {
     return false;
   }
 
@@ -166,8 +166,8 @@ export function isCompCandidate(target, candidate) {
   return true;
 }
 
-export function findComps(target, listings) {
-  return listings.filter((listing) => isCompCandidate(target, listing));
+export function findComps(target, listings, options = {}) {
+  return listings.filter((listing) => isCompCandidate(target, listing, options));
 }
 
 function formatDealLabel(vsMedianPercent, metricKey) {
@@ -342,12 +342,17 @@ export function buildListingAnalysis(targetListing, allListings) {
   };
 }
 
-export function compCriteriaDescription(target) {
-  const parts = [
-    'same region',
+export function compCriteriaDescription(target, { includeRegion = true } = {}) {
+  const parts = [];
+
+  if (includeRegion) {
+    parts.push('same region');
+  }
+
+  parts.push(
     target.isVacantLot ? 'vacant lots' : 'homes with structures',
     target.waterfront ? 'waterfront' : 'non-waterfront',
-  ];
+  );
 
   if (target.acres) {
     const { min, max } = acreBounds(target.acres);

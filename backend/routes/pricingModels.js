@@ -6,6 +6,7 @@ import {
   getPricingModel,
   listPricingModels,
   predictListingPrice,
+  predictFromSpec,
   trainPricingModel,
   updatePricingModel,
 } from '../services/pricing/index.js';
@@ -24,6 +25,19 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('List pricing models error:', error);
     res.status(500).json({ error: 'Failed to list pricing models' });
+  }
+});
+
+router.post('/estimate', async (req, res) => {
+  try {
+    const searchId = searchIdFrom(req);
+    const { modelId, ...spec } = req.body || {};
+
+    const result = await predictFromSpec(searchId, spec, modelId || null);
+    res.json(result);
+  } catch (error) {
+    console.error('Estimate from spec error:', error);
+    res.status(422).json({ error: error.message || 'Failed to estimate price' });
   }
 });
 

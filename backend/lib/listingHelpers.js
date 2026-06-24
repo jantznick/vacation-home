@@ -1,3 +1,5 @@
+import { getListingFreshness } from './listingFreshness.js';
+
 /**
  * Serialize a listing for API responses with derived metrics.
  */
@@ -16,6 +18,7 @@ export function serializeListing(listing) {
     sqftLiving,
     pricePerAcre: listPrice && acres ? Math.round(listPrice / acres) : null,
     pricePerSqft: listPrice && sqftLiving ? Math.round(listPrice / sqftLiving) : null,
+    ...getListingFreshness(listing),
   };
 }
 

@@ -81,12 +81,109 @@ function fitSegment(poolListings, features) {
   };
 }
 
+function predictFromStoredSegment(segment, targetListing, { criteria, sampleCount }) {
+  const normalized = normalizeListingForPricing(targetListing);
+  const vector = vectorizeListing(normalized, segment.columns, { imputeMeans: segment.imputeMeans });
+
+  if (!vector) {
+    return {
+      criteria,
+      sampleCount: sampleCount ?? segment.sampleCount,
+      available: false,
+      message: 'Add more property details (acres, beds, sqft, etc.) to get an estimate.',
+    };
+  }
+
+  const regression = MultivariateLinearRegression.load(segment.regressionModel);
+  const predicted = regression.predict(vector)[0];
+
+  if (!Number.isFinite(predicted) || predicted <= 0) {
+    return {
+      criteria,
+      sampleCount: sampleCount ?? segment.sampleCount,
+      available: false,
+      message:
+        'Could not produce a reliable estimate from current data. Add more listings or more property details (acres, beds, sqft).',
+    };
+  }
+
+  const estimatedPrice = Math.round(predicted);
+  const listPrice = normalized.listPrice != null ? Number(normalized.listPrice) : null;
+  const delta = listPrice != null ? estimatedPrice - listPrice : null;
+  const lowConfidence = (sampleCount ?? segment.sampleCount) < 8;
+
+  return {
+    criteria,
+    sampleCount: sampleCount ?? segment.sampleCount,
+    available: true,
+    estimatedPrice,
+    listPrice,
+    delta,
+    deltaPercent: listPrice
+      ? Math.round(((estimatedPrice - listPrice) / listPrice) * 100)
+      : null,
+    dealLabel: formatDealLabel(estimatedPrice, listPrice),
+    lowConfidence,
+    confidenceNote: lowConfidence
+      ? `Based on only ${sampleCount ?? segment.sampleCount} ${(sampleCount ?? segment.sampleCount) === 1 ? 'home' : 'homes'} — estimates get more reliable as you add listings (aim for 10+).`
+      : null,
+  };
+}
+
+function tierFromStoredSegment(segment, listing, { title, criteria, emptyMessage }) {
+  if (!segment) {
+    return {
+      title,
+      criteria,
+      sampleCount: 0,
+      needsMore: MIN_TRAINING_SAMPLES,
+      available: false,
+      message: emptyMessage,
+    };
+  }
+
+  return {
+    title,
+    ...predictFromStoredSegment(segment, listing, {
+      criteria,
+      sampleCount: segment.sampleCount,
+    }),
+  };
+}
+
+function buildListingTiersFromStoredModel(listing, modelData) {
+  const regionName = listing.region?.name ?? 'this region';
+  const target = normalizeListingForPricing(listing);
+  const segments = modelData?.segments ?? {};
+
+  return {
+    allListings: tierFromStoredSegment(segments.all, listing, {
+      title: 'All listings',
+      criteria: 'all listings you\'ve saved',
+      emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings with list prices.`,
+    }),
+    region: tierFromStoredSegment(segments.regions?.[listing.regionId], listing, {
+      title: `All in ${regionName}`,
+      criteria: `all listings in ${regionName}`,
+      emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings in ${regionName} with list prices.`,
+    }),
+    similar: tierFromStoredSegment(segments.similar?.[listing.id], listing, {
+      title: 'Similar listings',
+      criteria: compCriteriaDescription(target),
+      emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} similar listings with list prices.`,
+    }),
+  };
+}
+
 function predictFromPool(targetListing, poolListings, features, { criteria, emptyMessage }) {
   if (poolListings.length < MIN_TRAINING_SAMPLES) {
+    const needsMore = MIN_TRAINING_SAMPLES - poolListings.length;
     return {
       criteria,
       sampleCount: poolListings.length,
-      message: emptyMessage,
+      needsMore,
+      available: false,
+      message: `Add ${needsMore} more priced ${needsMore === 1 ? 'listing' : 'listings'} to see an estimate.`,
     };
   }
 
@@ -98,6 +195,7 @@ function predictFromPool(targetListing, poolListings, features, { criteria, empt
     return {
       criteria,
       sampleCount: poolListings.length,
+      available: false,
       message: 'Add more property details (acres, beds, sqft, etc.) to get an estimate.',
     };
   }
@@ -105,7 +203,18 @@ function predictFromPool(targetListing, poolListings, features, { criteria, empt
   const targets2d = matrix.targets.map((price) => [price]);
   const regression = new MultivariateLinearRegression(matrix.rows, targets2d);
   const predicted = regression.predict(vector)[0];
-  const estimatedPrice = Math.max(0, Math.round(predicted));
+
+  if (!Number.isFinite(predicted) || predicted <= 0) {
+    return {
+      criteria,
+      sampleCount: poolListings.length,
+      available: false,
+      message:
+        'Could not produce a reliable estimate from current data. Add more listings or more property details (acres, beds, sqft).',
+    };
+  }
+
+  const estimatedPrice = Math.round(predicted);
   const listPrice = normalized.listPrice != null ? Number(normalized.listPrice) : null;
   const delta = listPrice != null ? estimatedPrice - listPrice : null;
 
@@ -114,6 +223,7 @@ function predictFromPool(targetListing, poolListings, features, { criteria, empt
   return {
     criteria,
     sampleCount: poolListings.length,
+    available: true,
     estimatedPrice,
     listPrice,
     delta,
@@ -128,7 +238,7 @@ function predictFromPool(targetListing, poolListings, features, { criteria, empt
   };
 }
 
-async function resolveModelConfig(modelId) {
+async function resolveModelConfig(modelId, searchId = null) {
   if (modelId) {
     const model = await prisma.pricingModel.findUnique({ where: { id: modelId } });
     if (model?.features) {
@@ -147,7 +257,7 @@ async function resolveModelConfig(modelId) {
   }
 
   const defaultModel = await prisma.pricingModel.findFirst({
-    where: { isDefault: true },
+    where: searchId ? { searchId, isDefault: true } : { isDefault: true },
     orderBy: { updatedAt: 'desc' },
   });
 
@@ -518,6 +628,124 @@ export async function trainPricingModel(id) {
   return trainAllSegmentsForModel(id);
 }
 
+function pickBestListingPrediction(tiers) {
+  return tiers.similar.estimatedPrice != null
+    ? tiers.similar
+    : tiers.region.estimatedPrice != null
+      ? tiers.region
+      : tiers.allListings.estimatedPrice != null
+        ? tiers.allListings
+        : null;
+}
+
+function buildListingPredictionTiers(listing, allListings, features) {
+  const target = normalizeListingForPricing(listing);
+  const regionName = listing.region?.name ?? 'this region';
+  const priced = pricedListings(allListings);
+  const serialized = allListings.map(normalizeListingForPricing);
+
+  const allPool = priced;
+  const regionPool = priced.filter((item) => item.regionId === listing.regionId);
+  const similarCompListings = findComps(target, serialized);
+  const similarPool = priced.filter(
+    (item) => item.id === listing.id || similarCompListings.some((comp) => comp.id === item.id),
+  );
+
+  return {
+    allListings: {
+      title: 'All listings',
+      ...predictFromPool(listing, allPool, features, {
+        criteria: 'all listings you\'ve saved',
+        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings with list prices.`,
+      }),
+    },
+    region: {
+      title: `All in ${regionName}`,
+      ...predictFromPool(listing, regionPool, features, {
+        criteria: `all listings in ${regionName}`,
+        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings in ${regionName} with list prices.`,
+      }),
+    },
+    similar: {
+      title: 'Similar listings',
+      ...predictFromPool(listing, similarPool, features, {
+        criteria: compCriteriaDescription(target),
+        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} similar listings with list prices.`,
+      }),
+    },
+  };
+}
+
+export function priceSignalFromPrediction(prediction) {
+  if (!prediction?.estimatedPrice || prediction.listPrice == null) {
+    return null;
+  }
+
+  if (prediction.available === false) {
+    return null;
+  }
+
+  const listPrice = Number(prediction.listPrice);
+  if (!listPrice) {
+    return null;
+  }
+
+  const delta = prediction.estimatedPrice - listPrice;
+  const percent = Math.abs(Math.round((delta / listPrice) * 100));
+
+  if (percent === 0) {
+    return { direction: 'inline', percent: 0 };
+  }
+
+  // delta > 0: list price is below model estimate
+  return {
+    direction: delta > 0 ? 'below' : 'above',
+    percent,
+  };
+}
+
+export async function computeListingPriceSignals(searchId, serializedListings) {
+  const pricedOnPage = serializedListings.filter((listing) => listing.listPrice != null);
+  if (pricedOnPage.length === 0) {
+    return {};
+  }
+
+  const defaultModel = await prisma.pricingModel.findFirst({
+    where: { searchId, isDefault: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+  const allSegment = defaultModel?.modelData?.segments?.all;
+  if (!allSegment) {
+    return {};
+  }
+
+  const allListings = await prisma.listing.findMany({
+    where: { searchId },
+    include: { region: { select: { id: true, name: true } } },
+  });
+
+  const signals = {};
+
+  for (const listing of pricedOnPage) {
+    const dbListing = allListings.find((item) => item.id === listing.id);
+    if (!dbListing) {
+      continue;
+    }
+
+    const tier = predictFromStoredSegment(allSegment, dbListing, {
+      criteria: 'all listings you\'ve saved',
+      sampleCount: allSegment.sampleCount,
+    });
+    const signal = priceSignalFromPrediction(tier);
+    if (signal) {
+      signals[listing.id] = signal;
+    }
+  }
+
+  return signals;
+}
+
 export async function predictListingPrice(listingId, modelId = null) {
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
@@ -545,49 +773,8 @@ export async function predictListingPrice(listingId, modelId = null) {
     await trainAllSegmentsForModel(defaultModel.id);
   }
 
-  let { model, features } = await resolveModelConfig(modelId);
-  const target = normalizeListingForPricing(listing);
-  const regionName = listing.region?.name ?? 'this region';
-
-  const allListings = await prisma.listing.findMany({
-    where: { searchId: listing.searchId },
-    include: { region: { select: { id: true, name: true } } },
-  });
-  const priced = pricedListings(allListings);
-  const serialized = allListings.map(normalizeListingForPricing);
-
-  const allPool = priced;
-  const regionPool = priced.filter((item) => item.regionId === listing.regionId);
-  const similarCompListings = findComps(target, serialized)
-    .map((comp) => allListings.find((item) => item.id === comp.id))
-    .filter(Boolean);
-  const similarPool = priced.filter(
-    (item) => item.id === listing.id || similarCompListings.some((comp) => comp.id === item.id),
-  );
-
-  const tiers = {
-    allListings: {
-      title: 'All listings',
-      ...predictFromPool(listing, allPool, features, {
-        criteria: 'all listings you\'ve saved',
-        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings with list prices.`,
-      }),
-    },
-    region: {
-      title: `All in ${regionName}`,
-      ...predictFromPool(listing, regionPool, features, {
-        criteria: `all listings in ${regionName}`,
-        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings in ${regionName} with list prices.`,
-      }),
-    },
-    similar: {
-      title: 'Similar listings',
-      ...predictFromPool(listing, similarPool, features, {
-        criteria: compCriteriaDescription(target),
-        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} similar listings with list prices.`,
-      }),
-    },
-  };
+  let { model, modelData } = await resolveModelConfig(modelId, listing.searchId);
+  const tiers = buildListingTiersFromStoredModel(listing, modelData);
 
   return {
     listing: serializeListing(listing),
@@ -599,15 +786,179 @@ export async function predictListingPrice(listingId, modelId = null) {
           features: model.features,
         }
       : null,
-    features,
+    features: model?.features,
     tiers,
-    prediction: tiers.similar.estimatedPrice != null
+    prediction: pickBestListingPrediction(tiers),
+    message: model
+      ? null
+      : 'Using built-in default features. Create a custom pricing model to change feature selection.',
+  };
+}
+
+function isAnyRegionSpec(spec) {
+  const regionId = spec?.regionId;
+  return regionId == null || regionId === '' || regionId === 'any';
+}
+
+function featuresForDreamMode(features, anyRegion) {
+  if (!anyRegion) {
+    return features;
+  }
+  return features.filter((feature) => feature !== 'region');
+}
+
+function buildSyntheticListing(searchId, region, spec) {
+  const isVacantLot = Boolean(spec.isVacantLot);
+
+  return normalizeListingForPricing({
+    id: '__hypothetical__',
+    searchId,
+    regionId: region?.id ?? null,
+    listPrice: null,
+    isVacantLot,
+    acres: spec.acres ?? null,
+    sqftLiving: isVacantLot ? 0 : (spec.sqftLiving ?? null),
+    sqftLot: spec.sqftLot ?? null,
+    bedrooms: isVacantLot ? null : (spec.bedrooms ?? null),
+    bathrooms: isVacantLot ? null : (spec.bathrooms ?? null),
+    waterfront: Boolean(spec.waterfront),
+    yearBuilt: isVacantLot ? null : (spec.yearBuilt ?? null),
+    region: region ? { id: region.id, name: region.name } : null,
+  });
+}
+
+export async function predictFromSpec(searchId, spec, modelId = null) {
+  const anyRegion = isAnyRegionSpec(spec);
+  const regionId = anyRegion ? null : spec?.regionId;
+
+  let region = null;
+  if (!anyRegion) {
+    if (!regionId) {
+      throw new Error('regionId is required');
+    }
+
+    region = await prisma.region.findFirst({
+      where: { id: regionId, searchId },
+    });
+
+    if (!region) {
+      throw new Error('Region not found');
+    }
+  }
+
+  await ensureDefaultPricingModel(searchId);
+
+  const pricedCount = await prisma.listing.count({
+    where: { searchId, listPrice: { not: null } },
+  });
+  const defaultModel = await prisma.pricingModel.findFirst({
+    where: { searchId, isDefault: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+  if (
+    pricedCount >= MIN_TRAINING_SAMPLES
+    && defaultModel
+    && !defaultModel.modelData?.segments?.all
+  ) {
+    await trainAllSegmentsForModel(defaultModel.id);
+  }
+
+  const { model, features: modelFeatures } = await resolveModelConfig(modelId);
+  const features = featuresForDreamMode(modelFeatures, anyRegion);
+  const syntheticListing = buildSyntheticListing(searchId, region, spec);
+  const target = syntheticListing;
+
+  const allListings = await prisma.listing.findMany({
+    where: { searchId },
+    include: { region: { select: { id: true, name: true } } },
+  });
+  const priced = pricedListings(allListings);
+  const serialized = allListings.map(normalizeListingForPricing);
+
+  const compOptions = { requireSameRegion: !anyRegion };
+  const similarCompListings = findComps(target, serialized, compOptions);
+  const similarPool = priced.filter((item) =>
+    similarCompListings.some((comp) => comp.id === item.id),
+  );
+
+  const similarCriteria = compCriteriaDescription(target, { includeRegion: !anyRegion });
+  const similarTitle = anyRegion ? 'Similar properties' : 'Similar listings';
+
+  const tiers = {
+    allListings: {
+      title: 'All listings',
+      ...predictFromPool(syntheticListing, priced, features, {
+        criteria: 'all listings you\'ve saved',
+        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings with list prices.`,
+      }),
+    },
+    similar: {
+      title: similarTitle,
+      ...predictFromPool(syntheticListing, similarPool, features, {
+        criteria: similarCriteria,
+        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} similar listings with list prices.`,
+      }),
+    },
+  };
+
+  if (!anyRegion) {
+    const regionPool = priced.filter((item) => item.regionId === regionId);
+    tiers.region = {
+      title: `All in ${region.name}`,
+      ...predictFromPool(syntheticListing, regionPool, features, {
+        criteria: `all listings in ${region.name}`,
+        emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings in ${region.name} with list prices.`,
+      }),
+    };
+  }
+
+  const visibleTiers = anyRegion
+    ? ['allListings', 'similar']
+    : ['allListings', 'region', 'similar'];
+
+  const recommendedTier = anyRegion
+    ? (tiers.similar.estimatedPrice != null
+      ? 'similar'
+      : tiers.allListings.estimatedPrice != null
+        ? 'allListings'
+        : null)
+    : (tiers.similar.estimatedPrice != null
+      ? 'similar'
+      : tiers.region.estimatedPrice != null
+        ? 'region'
+        : tiers.allListings.estimatedPrice != null
+          ? 'allListings'
+          : null);
+
+  const prediction = anyRegion
+    ? (tiers.similar.estimatedPrice != null
+      ? tiers.similar
+      : tiers.allListings.estimatedPrice != null
+        ? tiers.allListings
+        : null)
+    : (tiers.similar.estimatedPrice != null
       ? tiers.similar
       : tiers.region.estimatedPrice != null
         ? tiers.region
         : tiers.allListings.estimatedPrice != null
           ? tiers.allListings
-          : null,
+          : null);
+
+  return {
+    mode: anyRegion ? 'anyRegion' : 'regional',
+    visibleTiers,
+    model: model
+      ? {
+          id: model.id,
+          name: model.name,
+          trainedAt: model.trainedAt,
+          features: model.features,
+        }
+      : null,
+    features,
+    recommendedTier,
+    tiers,
+    prediction,
     message: model
       ? null
       : 'Using built-in default features. Create a custom pricing model to change feature selection.',

@@ -12,7 +12,7 @@ const navItems = (searchId) => [
   { to: searchPath(searchId, '/regions'), label: 'Regions' },
   { to: searchPath(searchId, '/listings'), label: 'Listings' },
   { to: searchPath(searchId, '/map'), label: 'Map' },
-  { to: searchPath(searchId, '/pricing-models'), label: 'Pricing' },
+  { to: searchPath(searchId, '/estimator'), label: 'Estimator' },
   { to: searchPath(searchId, '/settings'), label: 'Settings' },
 ];
 

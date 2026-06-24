@@ -9,6 +9,7 @@ import { formatCurrency, formatDriveTime, statusLabel, REGION_STATUSES } from '.
 import useSearchAccess from '../hooks/useSearchAccess';
 import usePrimaryPoi from '../hooks/usePrimaryPoi';
 import ListingPrimaryDriveTime from '../components/ListingPrimaryDriveTime';
+import ListingStaleBadge from '../components/ListingStaleBadge';
 
 export default function Dashboard() {
   const searchId = useSearchId();
@@ -133,9 +134,12 @@ export default function Dashboard() {
                     <li key={listing.id}>
                       <ClickableRow to={searchPath(searchId, `/listings/${listing.id}`)}>
                         <div>
-                          <p className="font-medium text-pine-800">
-                            {listing.address || 'Untitled listing'}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium text-pine-800">
+                              {listing.address || 'Untitled listing'}
+                            </p>
+                            <ListingStaleBadge listing={listing} />
+                          </div>
                           <p className="text-xs text-pine-500">
                             {listing.region.name} · {listing.isVacantLot ? 'Vacant lot' : 'With home'}
                           </p>
