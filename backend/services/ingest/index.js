@@ -4,9 +4,10 @@ import {
   importDnrLakeFromWbic,
   parseWbicFromUrl,
 } from './wiDnrLake.js';
-import { detectSourceSite, fetchZillowListing, parseZillowFromPaste } from './zillow.js';
+import { detectSourceSite, parseZillowFromPaste } from './zillow.js';
+import { fetchListingFromZillapi, isZillapiConfigured } from './zillapi.js';
 
-export async function previewListingFromUrl(urlString) {
+export async function previewListingFromUrl(urlString, context = {}) {
   if (!urlString?.trim()) {
     throw new Error('URL is required');
   }
@@ -16,8 +17,12 @@ export async function previewListingFromUrl(urlString) {
     throw new Error('Unsupported listing site. Only Zillow URLs are supported for now.');
   }
 
+  if (!isZillapiConfigured()) {
+    throw new Error('Listing import is not configured. Set ZILLAPI_KEY on the server.');
+  }
+
   if (sourceSite === 'zillow') {
-    return fetchZillowListing(urlString);
+    return fetchListingFromZillapi(urlString, context);
   }
 
   throw new Error('Unsupported listing site');
@@ -53,4 +58,4 @@ export function previewDnrLakeFromHtml({ wbic, overviewHtml, factsHtml }) {
   return importDnrLakeFromHtml({ wbic, overviewHtml, factsHtml });
 }
 
-export { parseWbicFromUrl };
+export { parseWbicFromUrl, isZillapiConfigured };

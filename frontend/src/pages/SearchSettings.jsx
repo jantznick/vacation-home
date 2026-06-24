@@ -9,6 +9,7 @@ import FormField from '../components/FormField';
 import ConfirmModal from '../components/ConfirmModal';
 import { showError, showInviteCreated, showSuccess } from '../lib/toast';
 import useAuthStore from '../store/authStore';
+import ZillowPasteImport from '../components/ZillowPasteImport';
 
 const MEMBER_ROLES = [
   { value: 'owner', label: 'Owner' },
@@ -665,6 +666,8 @@ export default function SearchSettings() {
           confirmText="Remove member"
         />
       )}
+
+      <ZillowPasteImport canEdit={canEdit} />
 
     </div>
   );

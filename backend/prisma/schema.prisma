@@ -301,6 +301,27 @@ model Comment {
   @@index([userId])
 }
 
+model IngestApiCall {
+  id             String   @id @default(uuid())
+  searchId       String?
+  userId         String?
+  provider       String
+  endpoint       String
+  success        Boolean
+  httpStatus     Int?
+  creditsCharged Boolean  @default(false)
+  errorCode      String?
+  errorMessage   String?
+  sourceUrl      String?
+  zpid           String?
+  requestId      String?
+  createdAt      DateTime @default(now())
+
+  @@index([searchId, createdAt])
+  @@index([provider, createdAt])
+  @@index([success])
+}
+
 model PricingModel {
   id          String    @id @default(uuid())
   searchId    String

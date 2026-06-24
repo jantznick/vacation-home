@@ -128,6 +128,14 @@ export default function Layout({ children }) {
               >
                 Account
               </Link>
+              {user?.isAdmin && (
+                <Link
+                  to="/admin"
+                  className="hidden rounded-md px-2.5 py-1.5 text-sm text-pine-200 hover:bg-white/10 hover:text-white sm:block"
+                >
+                  Admin
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}
@@ -187,6 +195,14 @@ export default function Layout({ children }) {
               >
                 Account
               </Link>
+              {user?.isAdmin && (
+                <Link
+                  to="/admin"
+                  className="block rounded-md px-3 py-2.5 text-sm font-medium text-pine-200 hover:bg-white/10 hover:text-white"
+                >
+                  Admin
+                </Link>
+              )}
             </div>
           </nav>
         )}

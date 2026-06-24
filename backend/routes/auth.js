@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import prisma from '../lib/prisma.js';
+import { withAdminFlag } from '../lib/admin.js';
 import { isResendConfigured, sendMagicLinkEmail } from '../services/email/resend.js';
 
 const router = express.Router();
@@ -57,7 +58,7 @@ function saveSession(req, res, user) {
       return;
     }
 
-    res.json({ user });
+    res.json({ user: withAdminFlag(user) });
   });
 }
 
@@ -302,7 +303,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    res.json({ user });
+    res.json({ user: withAdminFlag(user) });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });

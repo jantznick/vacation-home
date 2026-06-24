@@ -7,9 +7,11 @@ import { Pool } from 'pg';
 import cookieParser from 'cookie-parser';
 
 import prisma from './lib/prisma.js';
-import { requireAuth } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
+import adminRoutes from './routes/admin.js';
 import searchRoutes, { publicSearchRoutes } from './routes/searches.js';
+import { requireAuth } from './middleware/auth.js';
+import { requireAdmin } from './middleware/admin.js';
 import { closeBrowser } from './services/ingest/browser.js';
 
 dotenv.config();
@@ -58,6 +60,7 @@ app.use(session({
 }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', requireAuth, requireAdmin, adminRoutes);
 app.use('/api/searches', publicSearchRoutes);
 app.use('/api/searches', requireAuth, searchRoutes);
 

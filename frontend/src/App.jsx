@@ -19,6 +19,8 @@ import PricingModels from './pages/PricingModels';
 import Profile from './pages/Profile';
 import MapOverview from './pages/MapOverview';
 import SearchSettings from './pages/SearchSettings';
+import Admin from './pages/Admin';
+import AdminRoute from './components/AdminRoute';
 import HomeRoute from './components/HomeRoute';
 import { Privacy, Terms } from './pages/LegalPage';
 import About from './pages/About';
@@ -83,6 +85,7 @@ export default function App() {
       <Route path="/searches/:searchId/map" element={<SearchLayout><MapOverview /></SearchLayout>} />
       <Route path="/searches/:searchId/settings" element={<SearchLayout><SearchSettings /></SearchLayout>} />
       <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
+      <Route path="/admin" element={<AdminRoute><AppLayout><Admin /></AppLayout></AdminRoute>} />
 
       <Route path="/" element={<HomeRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />

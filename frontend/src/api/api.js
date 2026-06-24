@@ -74,6 +74,17 @@ export const searchesAPI = {
     request('/searches/invites/accept', { method: 'POST', body: JSON.stringify({ token }) }),
 };
 
+export const adminAPI = {
+  ingestCalls: ({ limit = 100, offset = 0, provider = 'zillapi' } = {}) => {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+      provider,
+    });
+    return request(`/admin/ingest-calls?${params}`);
+  },
+};
+
 export function createSearchAPI(searchId) {
   const base = `/searches/${searchId}`;
 

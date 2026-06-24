@@ -72,7 +72,7 @@ Use this once before or right after deploying to Railway.
 
 **Known limitations (by design)**
 
-- Zillow updates = re-paste JSON on edit (no live refetch)
+- Zillow updates = Refresh from Zillow on edit (ZillAPI) or re-paste in settings
 - ML estimates need ≥3 priced listings per segment; noisy with very small samples
 - Drive time is per-user home; cached on region/listing after you click calculate
 - `showCompAnalysis` column exists in DB but is unused (legacy)
@@ -179,7 +179,9 @@ Frontend: http://localhost:5173 (proxies `/api` to backend)
 | `NODE_ENV` | No | `development` or `production` |
 | `COOKIE_DOMAIN` | No | Cross-subdomain cookies in production |
 | `JSON_BODY_LIMIT` | No | Default `10mb` (Zillow paste import) |
-| `ZILLOW_FETCH_METHOD` | No | `puppeteer` (default) or `fetch` — unreliable for Zillow |
+| `ZILLAPI_KEY` | For URL import | ZillAPI bearer token (`zk_…`) — property + photos lookups |
+| `ADMIN_EMAIL` | For admin page | Email of the user who can view `/admin` and ZillAPI call logs |
+| `ZILLOW_FETCH_METHOD` | No | Legacy — unused by URL import; paste parser only |
 
 Puppeteer vars (`PUPPETEER_*`) only matter if debugging server-side Zillow fetch.
 
@@ -192,6 +194,8 @@ PORT=3001
 NODE_ENV=development
 FRONTEND_URL="http://localhost:5173"
 GOOGLE_MAPS_API_KEY=""
+ZILLAPI_KEY=""
+ADMIN_EMAIL="you@example.com"
 ```
 
 ### Frontend
@@ -278,19 +282,17 @@ Derived on API responses: `pricePerAcre`, `pricePerSqft`.
 
 ## Data import (Zillow & DNR)
 
-### Zillow listings (paste — recommended)
+### Zillow listings (URL import — recommended)
 
-Zillow blocks server fetch. Use browser paste on the listing form.
+Paste a Zillow listing URL on the Add listing form. The server fetches property details and photos via ZillAPI (two separate API calls). Requires `ZILLAPI_KEY` on the backend.
 
-1. Open listing in Chrome → DevTools → Console
-2. Run: `copy(document.querySelector('#__NEXT_DATA__').textContent)`
-3. In app: paste URL + JSON → **Import**
+**Mobile:** In Zillow, tap Share → Copy Link → paste in the app.
 
-Parser reads `gdpClientCache` and extracts address, price, beds, **photos**, **lat/lng**.
+**Update existing listing:** Edit listing → Refresh from Zillow.
 
-**Update existing listing:** Edit and paste fresh JSON (live refetch was removed).
+**Advanced fallback:** Search settings → Advanced → Zillow browser paste (desktop only, no API credits).
 
-**Test locally:** `cd backend && npm run parse:zillow -- data.json`
+**Test paste parser locally:** `cd backend && npm run parse:zillow -- data.json`
 
 ### WI DNR lakes
 
@@ -456,8 +458,8 @@ Base: `/api`. All routes except auth and health need session cookie.
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/ingest/preview-paste` | **Zillow paste** (recommended) |
-| POST | `/ingest/preview` | Server Zillow fetch (often 403) |
+| POST | `/ingest/preview` | **Zillow URL import** via ZillAPI (recommended) |
+| POST | `/ingest/preview-paste` | Zillow browser paste (advanced fallback) |
 | POST | `/ingest/dnr-lake/preview` | DNR URL or `wbic` |
 | POST | `/ingest/dnr-lake/preview-paste` | Pasted DNR HTML |
 
@@ -491,7 +493,13 @@ Base: `/api`. All routes except auth and health need session cookie.
 | Email already registered | Use login or a different email |
 | Session not persisting | `SESSION_SECRET` set; `FRONTEND_URL` matches frontend origin |
 | DB connection failed | `docker-compose up postgres -d`; check `DATABASE_URL` |
-| Zillow import fails | Use paste method; check `JSON_BODY_LIMIT` |
+| Zillow import fails | Check `ZILLAPI_KEY`; try Advanced paste in settings |
+
+### Admin
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/admin/ingest-calls` | ZillAPI call log (admin only; `ADMIN_EMAIL`) |
 | Pricing tabs empty | Need ≥3 priced listings in that segment |
 | Photos missing | Re-paste Zillow JSON on edit |
 

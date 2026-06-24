@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
 import useSearchAccess from '../hooks/useSearchAccess';
-import { ZILLOW_COPY_SNIPPET } from '../lib/zillowSnippet';
 import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
@@ -53,17 +52,18 @@ export default function ListingForm() {
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
     ...emptyForm,
     regionId: searchParams.get('regionId') || '',
   });
+  const [importUrl, setImportUrl] = useState('');
   const [regions, setRegions] = useState([]);
   const [lakes, setLakes] = useState([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [pasting, setPasting] = useState(false);
-  const [pastedData, setPastedData] = useState('');
+  const [importing, setImporting] = useState(false);
   const [fetchWarnings, setFetchWarnings] = useState([]);
   const [rawScrapedData, setRawScrapedData] = useState(null);
   const [error, setError] = useState('');
@@ -135,6 +135,9 @@ export default function ListingForm() {
           visitNotes: listing.visitNotes || '',
           daysOnMarket: listing.daysOnMarket ?? '',
         });
+        if (listing.sourceUrl) {
+          setImportUrl(listing.sourceUrl);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -178,32 +181,36 @@ export default function ListingForm() {
     return null;
   };
 
-  const handleCopySnippet = async () => {
-    try {
-      await navigator.clipboard.writeText(ZILLOW_COPY_SNIPPET);
-      setFetchWarnings(['Copied — paste into the Zillow page console, press Enter, then paste the result here.']);
-    } catch {
-      setError('Could not copy snippet — select and copy it manually from the code block.');
-    }
-  };
+  useEffect(() => {
+    if (isEdit || !location.state?.importedFields) return;
 
-  const handlePasteImport = async () => {
-    if (!form.sourceUrl?.trim()) {
-      setError('Paste the Zillow listing URL first');
-      return;
-    }
-    if (!pastedData.trim()) {
-      setError('Paste the page data from your browser');
-      return;
+    const importWarning = applyPreviewFields(location.state.importedFields);
+    setFetchWarnings([
+      ...(location.state.importWarnings || []),
+      ...(importWarning ? [importWarning] : []),
+    ]);
+    if (location.state.importedFields.sourceUrl) {
+      setImportUrl(location.state.importedFields.sourceUrl);
     }
 
-    setPasting(true);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [isEdit, location.pathname, location.state, navigate]);
+
+  const handleUrlImport = async (urlOverride) => {
+    const url = (urlOverride ?? importUrl).trim();
+    if (!url) {
+      setError('Paste a Zillow listing URL first');
+      return;
+    }
+
+    setImporting(true);
     setError('');
     setFetchWarnings([]);
 
     try {
-      const data = await api.ingest.previewPaste(form.sourceUrl.trim(), pastedData.trim());
+      const data = await api.ingest.preview(url);
       const importWarning = applyPreviewFields(data.fields);
+      setImportUrl(data.fields.sourceUrl || url);
       setFetchWarnings([
         ...(data.warnings || []),
         ...(importWarning ? [importWarning] : []),
@@ -211,7 +218,7 @@ export default function ListingForm() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setPasting(false);
+      setImporting(false);
     }
   };
 
@@ -305,51 +312,34 @@ export default function ListingForm() {
     <div>
       <PageHeader
         title={isEdit ? 'Edit listing' : 'Add listing'}
-        description="Paste a Zillow URL plus JSON from your browser console."
+        description="Paste a Zillow listing URL to import details and photos."
       />
 
       <Card className="mb-6 max-w-4xl">
-        <h2 className="text-lg font-medium text-pine-900">Import from Zillow</h2>
+        <h2 className="text-lg font-medium text-pine-900">Import from Zillow URL</h2>
         <p className="mt-1 text-sm text-pine-600">
-          Open the listing in Chrome → DevTools console → run the line below → paste URL + JSON here.
+          Copy the link from Zillow (Share → Copy Link on mobile) and paste it below.
         </p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <code className="flex-1 rounded-md bg-pine-900 px-3 py-2 text-xs text-pine-100">
-            {ZILLOW_COPY_SNIPPET}
-          </code>
-          <Button type="button" variant="secondary" onClick={handleCopySnippet}>
-            Copy
-          </Button>
-        </div>
 
         <div className="mt-4">
           <label className="mb-1 block text-sm font-medium text-pine-800">Zillow URL</label>
           <input
-            name="sourceUrl"
-            value={form.sourceUrl}
-            onChange={handleChange}
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
             placeholder="https://www.zillow.com/homedetails/..."
             className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
           />
         </div>
 
-        <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-pine-800">Pasted JSON</label>
-          <textarea
-            value={pastedData}
-            onChange={(e) => setPastedData(e.target.value)}
-            rows={8}
-            placeholder="Paste whatever the console copied — big file is fine"
-            className="w-full rounded-md border border-pine-300 px-3 py-2 font-mono text-xs"
-          />
-        </div>
-
-        <div className="mt-4">
-          <Button type="button" onClick={handlePasteImport} disabled={pasting}>
-            {pasting ? 'Importing...' : 'Import'}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" onClick={() => handleUrlImport()} disabled={importing}>
+            {importing ? 'Importing...' : isEdit ? 'Refresh from Zillow' : 'Import'}
           </Button>
         </div>
+
+        {error && (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
 
         {fetchWarnings.length > 0 && (
           <ul className="mt-3 space-y-1">

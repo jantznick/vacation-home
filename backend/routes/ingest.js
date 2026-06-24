@@ -8,6 +8,13 @@ import {
 
 const router = express.Router();
 
+function ingestContext(req) {
+  return {
+    searchId: req.params.searchId ?? null,
+    userId: req.session?.userId ?? null,
+  };
+}
+
 router.post('/preview', async (req, res) => {
   try {
     const { url } = req.body;
@@ -16,13 +23,14 @@ router.post('/preview', async (req, res) => {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    const result = await previewListingFromUrl(url.trim());
+    const result = await previewListingFromUrl(url.trim(), ingestContext(req));
 
     res.json({
       fields: result.fields,
       warnings: result.warnings,
       sourceSite: result.sourceSite,
       fetchMethod: result.fetchMethod,
+      apiUsage: result.apiUsage ?? null,
     });
   } catch (error) {
     console.error('Ingest preview error:', error);
