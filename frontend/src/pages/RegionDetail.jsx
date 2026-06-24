@@ -173,7 +173,10 @@ export default function RegionDetail() {
 
     try {
       const data = await api.regions.geocode(id);
-      setRegion(data.region);
+      setRegion((current) => ({
+        ...current,
+        ...data.region,
+      }));
     } catch (err) {
       setLocationError(err.message);
     } finally {
@@ -293,6 +296,7 @@ export default function RegionDetail() {
             {region.latitude != null && region.longitude != null && (
               <div className="mt-4">
                 <RouteMap
+                  key={`${region.id}-${region.latitude}-${region.longitude}`}
                   destination={region}
                   destinationType="region"
                   destinationLabel={region.name}

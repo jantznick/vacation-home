@@ -1,17 +1,12 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import prisma from '../lib/prisma.js';
-import {
-  consumeLoginToken,
-  createLoginToken,
-  TOKEN_TTL_MS,
-  verifyLoginCode,
-  verifyLoginToken,
-} from '../lib/loginTokens.js';
 import { isResendConfigured, sendMagicLinkEmail } from '../services/email/resend.js';
 
 const router = express.Router();
 
+const TOKEN_TTL_MS = 15 * 60 * 1000;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const userSelect = {
@@ -23,6 +18,33 @@ const userSelect = {
 function normalizeEmail(email) {
   return email.trim().toLowerCase();
 }
+
+function normalizeToken(token) {
+  if (Array.isArray(token)) {
+    return token.join('');
+  }
+  return String(token).trim();
+}
+
+function generateSixDigitCode() {
+  return String(crypto.randomInt(100000, 1000000));
+}
+
+function generateLinkToken() {
+  return crypto.randomUUID();
+}
+
+async function cleanupExpiredTokens() {
+  try {
+    await prisma.magicToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+  } catch (error) {
+    console.error('Error cleaning up expired magic tokens:', error);
+  }
+}
+
+setInterval(cleanupExpiredTokens, 5 * 60 * 1000);
 
 function saveSession(req, res, user) {
   req.session.userId = user.id;
@@ -64,9 +86,8 @@ async function findOrCreateUser(email) {
   return user;
 }
 
-async function completeMagicLogin(req, res, record) {
-  const user = await findOrCreateUser(record.email);
-  await consumeLoginToken(record);
+async function completeMagicLogin(req, res, email) {
+  const user = await findOrCreateUser(email);
   await regenerateSession(req);
   saveSession(req, res, {
     id: user.id,
@@ -75,9 +96,25 @@ async function completeMagicLogin(req, res, record) {
   });
 }
 
-const magicLinkSentResponse = {
-  message: 'If that email is valid, we sent a sign-in link and code.',
-};
+async function issueMagicTokens(email) {
+  const normalizedEmail = normalizeEmail(email);
+  const sixDigitCode = generateSixDigitCode();
+  const linkToken = generateLinkToken();
+  const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
+
+  await prisma.magicToken.deleteMany({
+    where: { email: normalizedEmail },
+  });
+
+  await prisma.magicToken.createMany({
+    data: [
+      { token: sixDigitCode, email: normalizedEmail, expiresAt },
+      { token: linkToken, email: normalizedEmail, expiresAt },
+    ],
+  });
+
+  return { sixDigitCode, linkToken, expiresAt };
+}
 
 router.post('/register', async (req, res) => {
   try {
@@ -158,9 +195,9 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/magic-link/request', async (req, res) => {
+router.post('/magic-token/request', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, intent = 'login' } = req.body;
 
     if (!email || !emailRegex.test(email)) {
       return res.status(400).json({ error: 'Please enter a valid email address' });
@@ -171,72 +208,72 @@ router.post('/magic-link/request', async (req, res) => {
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const { rawToken, code } = await createLoginToken(normalizedEmail);
+    const { sixDigitCode, linkToken, expiresAt } = await issueMagicTokens(normalizedEmail);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const loginUrl = `${frontendUrl}/auth/verify?token=${rawToken}`;
+    const loginPath = intent === 'register' ? '/register' : '/login';
+    const loginUrl = `${frontendUrl}${loginPath}?token=${linkToken}`;
 
-    await sendMagicLinkEmail({
-      to: normalizedEmail,
-      loginUrl,
-      code,
-      expiresMinutes: Math.round(TOKEN_TTL_MS / 60000),
-    });
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[magic-link] Dev sign-in for', normalizedEmail);
-      console.log('[magic-link] Code:', code);
-      console.log('[magic-link] URL:', loginUrl);
+    try {
+      await sendMagicLinkEmail({
+        to: normalizedEmail,
+        loginUrl,
+        code: sixDigitCode,
+        expiresMinutes: Math.round(TOKEN_TTL_MS / 60000),
+      });
+    } catch (emailError) {
+      console.error('Failed to send magic link email:', emailError);
+      if (process.env.NODE_ENV === 'production') {
+        throw emailError;
+      }
     }
 
-    res.json(magicLinkSentResponse);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n=== MAGIC TOKEN ===');
+      console.log(`Email: ${normalizedEmail}`);
+      console.log(`6-Digit Code: ${sixDigitCode}`);
+      console.log(`Login Link: ${loginUrl}`);
+      console.log(`Link Token: ${linkToken}`);
+      console.log(`Expires at: ${expiresAt.toISOString()}`);
+      console.log('===================\n');
+    }
+
+    res.json({
+      message: 'If that email is valid, we sent a sign-in link and code.',
+    });
   } catch (error) {
-    console.error('Magic link request error:', error);
+    console.error('Magic token request error:', error);
     res.status(500).json({ error: 'Failed to send sign-in email' });
   }
 });
 
-router.post('/magic-link/verify-code', async (req, res) => {
+router.post('/magic-token/login', async (req, res) => {
   try {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ error: 'Email and code are required' });
-    }
-
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Please enter a valid email address' });
-    }
-
-    const record = await verifyLoginCode(email, code);
-    if (!record) {
-      return res.status(401).json({ error: 'Invalid or expired code' });
-    }
-
-    await completeMagicLogin(req, res, record);
-  } catch (error) {
-    console.error('Magic link code verify error:', error);
-    res.status(500).json({ error: 'Failed to verify code' });
-  }
-});
-
-router.post('/magic-link/verify-token', async (req, res) => {
-  try {
-    const { token } = req.body;
+    const token = normalizeToken(req.body.token);
 
     if (!token) {
       return res.status(400).json({ error: 'Token is required' });
     }
 
-    const record = await verifyLoginToken(token);
-    if (!record) {
+    const magicToken = await prisma.magicToken.findUnique({
+      where: { token },
+    });
+
+    if (!magicToken) {
       return res.status(401).json({ error: 'Invalid or expired sign-in link' });
     }
 
-    await completeMagicLogin(req, res, record);
+    if (magicToken.expiresAt < new Date()) {
+      await prisma.magicToken.delete({ where: { id: magicToken.id } });
+      return res.status(401).json({ error: 'Sign-in link has expired' });
+    }
+
+    await prisma.magicToken.delete({ where: { id: magicToken.id } });
+
+    await completeMagicLogin(req, res, magicToken.email);
   } catch (error) {
-    console.error('Magic link token verify error:', error);
-    res.status(500).json({ error: 'Failed to verify sign-in link' });
+    console.error('Magic token login error:', error);
+    res.status(500).json({ error: 'Failed to sign in' });
   }
 });
 

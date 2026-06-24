@@ -219,7 +219,19 @@ router.post('/:id/geocode', async (req, res) => {
       return res.status(503).json({ error: 'Google Maps is not configured (GOOGLE_MAPS_API_KEY)' });
     }
 
-    const region = await geocodeRegion(req.params.id);
+    await geocodeRegion(req.params.id);
+
+    let region;
+    try {
+      region = await computeRegionDriveTime(req.params.id, searchIdFrom(req));
+    } catch (driveError) {
+      console.warn('Drive time after region geocode skipped:', driveError.message);
+      region = await prisma.region.findUnique({
+        where: { id: req.params.id },
+        include: regionInclude,
+      });
+    }
+
     res.json({ region });
   } catch (error) {
     console.error('Geocode region error:', error);

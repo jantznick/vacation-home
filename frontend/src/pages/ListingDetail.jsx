@@ -102,7 +102,15 @@ export default function ListingDetail() {
 
     try {
       const data = await api.listings.geocode(id);
-      setListing(data.listing);
+      setListing((current) => ({
+        ...current,
+        ...data.listing,
+        region: data.listing.region ?? current?.region,
+        lake: data.listing.lake ?? current?.lake,
+      }));
+      if (data.commutes?.length) {
+        setCommutes(data.commutes);
+      }
     } catch (err) {
       setLocationError(err.message);
     } finally {
@@ -116,9 +124,13 @@ export default function ListingDetail() {
 
     try {
       const data = await api.listings.driveTime(id);
-      setListing(data.listing);
-      const commutesData = await api.listings.commutes(id).catch(() => ({ commutes: [] }));
-      setCommutes(commutesData.commutes || []);
+      setListing((current) => ({
+        ...current,
+        ...data.listing,
+        region: data.listing.region ?? current?.region,
+        lake: data.listing.lake ?? current?.lake,
+      }));
+      setCommutes(data.commutes || []);
     } catch (err) {
       setLocationError(err.message);
     } finally {
@@ -300,6 +312,7 @@ export default function ListingDetail() {
             {listing.latitude != null && listing.longitude != null && (
               <div className="mt-4">
                 <RouteMap
+                  key={`${listing.id}-${listing.latitude}-${listing.longitude}`}
                   destination={listing}
                   destinationType="listing"
                   destinationLabel={listing.address || 'Listing'}

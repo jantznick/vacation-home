@@ -405,9 +405,8 @@ Base: `/api`. All routes except auth and health need session cookie.
 |---|---|---|
 | POST | `/auth/register` | Body: `{ email, password }` |
 | POST | `/auth/login` | Body: `{ email, password }` |
-| POST | `/auth/magic-link/request` | Body: `{ email }` — sends link + 6-digit code |
-| POST | `/auth/magic-link/verify-code` | Body: `{ email, code }` |
-| POST | `/auth/magic-link/verify-token` | Body: `{ token }` — used by `/auth/verify` page |
+| POST | `/auth/magic-token/request` | Body: `{ email, intent? }` — `intent` is `login` or `register`; sends link + 6-digit code |
+| POST | `/auth/magic-token/login` | Body: `{ token }` — 6-digit code or link token; signs in or creates account |
 | POST | `/auth/logout` | |
 | GET | `/auth/me` | Current user incl. home fields |
 | PATCH | `/auth/profile` | Body: home address fields; auto-geocode |

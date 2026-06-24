@@ -77,7 +77,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-pine-800 bg-pine-900 text-white">
+      <header className="sticky top-0 z-[1100] border-b border-pine-800 bg-pine-900 text-white">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex h-14 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">

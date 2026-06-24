@@ -342,8 +342,21 @@ router.post('/:id/geocode', async (req, res) => {
       return res.status(503).json({ error: 'Google Maps is not configured (GOOGLE_MAPS_API_KEY)' });
     }
 
-    const listing = await geocodeListing(req.params.id);
-    res.json({ listing: serializeListing(listing) });
+    const searchId = searchIdFrom(req);
+    await geocodeListing(req.params.id);
+
+    let listing;
+    let commutes = [];
+    try {
+      const result = await computeAllListingCommutes(req.params.id, searchId);
+      listing = result.listing;
+      commutes = result.commutes;
+    } catch (driveError) {
+      console.warn('Drive time after listing geocode skipped:', driveError.message);
+      listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
+    }
+
+    res.json({ listing: serializeListing(listing), commutes });
   } catch (error) {
     console.error('Geocode listing error:', error);
     res.status(422).json({ error: error.message || 'Failed to geocode listing' });

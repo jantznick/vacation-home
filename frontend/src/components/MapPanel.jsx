@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Circle,
@@ -18,26 +18,34 @@ const MARKER_COLORS = {
   listing: '#ea580c',
 };
 
-function FitBounds({ markers, route }) {
+function FitBounds({ markers, routePositions }) {
   const map = useMap();
 
   useEffect(() => {
     const points = [
       ...markers.map((marker) => [marker.latitude, marker.longitude]),
-      ...(route || []),
+      ...routePositions,
     ];
 
     if (points.length === 0) {
       return;
     }
 
-    if (points.length === 1) {
-      map.setView(points[0], 10);
-      return;
-    }
+    const sync = () => {
+      map.invalidateSize({ pan: false });
 
-    map.fitBounds(points, { padding: [48, 48] });
-  }, [map, markers, route]);
+      if (points.length === 1) {
+        map.setView(points[0], 10);
+        return;
+      }
+
+      map.fitBounds(points, { padding: [48, 48] });
+    };
+
+    // Defer until Leaflet has laid out the container (e.g. after map first mounts).
+    const frame = requestAnimationFrame(sync);
+    return () => cancelAnimationFrame(frame);
+  }, [map, markers, routePositions]);
 
   return null;
 }
@@ -52,6 +60,14 @@ export default function MapPanel({
 }) {
   const mapHeightClass = height ? '' : 'h-[min(50vh,520px)] min-h-[240px]';
   const mapStyle = height ? { height } : undefined;
+  const routePositions = useMemo(
+    () => route?.map((point) => [point.latitude, point.longitude]) ?? [],
+    [route],
+  );
+  const routeKey = routePositions.length > 0
+    ? routePositions.map(([lat, lng]) => `${lat},${lng}`).join('|')
+    : 'no-route';
+
   if (!markers.length && !circles.length) {
     return (
       <div
@@ -66,10 +82,9 @@ export default function MapPanel({
   const center = markers.length
     ? [markers[0].latitude, markers[0].longitude]
     : [circles[0].latitude, circles[0].longitude];
-  const routePositions = route?.map((point) => [point.latitude, point.longitude]) ?? [];
 
   return (
-    <div className={`overflow-hidden rounded-lg border border-pine-200 ${mapHeightClass} ${className}`} style={mapStyle}>
+    <div className={`relative isolate overflow-hidden rounded-lg border border-pine-200 ${mapHeightClass} ${className}`} style={mapStyle}>
       <MapContainer
         center={center}
         zoom={8}
@@ -81,10 +96,11 @@ export default function MapPanel({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <FitBounds markers={markers} route={routePositions} />
+        <FitBounds markers={markers} routePositions={routePositions} />
 
         {routePositions.length > 0 && (
           <Polyline
+            key={routeKey}
             positions={routePositions}
             pathOptions={{ color: '#166534', weight: 4, opacity: 0.85 }}
           />

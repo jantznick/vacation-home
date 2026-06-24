@@ -1,24 +1,50 @@
-import { useState } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI } from '../api/api';
 import useAuthStore from '../store/authStore';
 import Button from '../components/Button';
-import MagicLinkSignIn from '../components/MagicLinkSignIn';
 import MarketingLayout from '../components/MarketingLayout';
 import { APP_TAGLINE } from '../lib/brand';
 
+const urlTokensInFlight = new Set();
+
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/searches';
   const { setUser, isAuthenticated, isLoading } = useAuthStore();
-  const [magicMode, setMagicMode] = useState(false);
   const [email, setEmail] = useState(() => searchParams.get('email') || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [requestingToken, setRequestingToken] = useState(false);
+  const [tokenRequested, setTokenRequested] = useState(false);
+  const [code, setCode] = useState('');
 
-  if (!isLoading && isAuthenticated) {
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (!token || location.pathname !== '/register' || urlTokensInFlight.has(token)) {
+      return;
+    }
+
+    urlTokensInFlight.add(token);
+    setLoading(true);
+    setError('');
+
+    authAPI.loginWithMagicToken(token)
+      .then((data) => {
+        setUser(data.user);
+        navigate(redirectTo, { replace: true });
+      })
+      .catch((err) => {
+        urlTokensInFlight.delete(token);
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [searchParams, location.pathname, setUser, navigate, redirectTo]);
+
+  if (!isLoading && isAuthenticated && !searchParams.get('token')) {
     return <Navigate to={redirectTo} replace />;
   }
 
@@ -38,18 +64,39 @@ export default function Register() {
     }
   };
 
-  const handleMagicSuccess = (user) => {
-    setUser(user);
-    navigate(redirectTo);
-  };
-
-  const handleMagicLinkClick = () => {
-    setError('');
+  const handleRequestMagicLink = async () => {
     if (!email.trim()) {
       setError('Enter your email first');
       return;
     }
-    setMagicMode(true);
+
+    setError('');
+    setRequestingToken(true);
+
+    try {
+      await authAPI.requestMagicToken(email, 'register');
+      setTokenRequested(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRequestingToken(false);
+    }
+  };
+
+  const handleMagicCodeSubmit = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const data = await authAPI.loginWithMagicToken(code);
+      setUser(data.user);
+      navigate(redirectTo);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loginQuery = searchParams.toString();
@@ -63,63 +110,98 @@ export default function Register() {
           <h1 className="mt-4 text-2xl font-semibold text-pine-900">Create account</h1>
           <p className="mt-2 text-sm text-pine-600">{APP_TAGLINE}</p>
 
-          <div className="mt-6">
-            {magicMode ? (
-              <MagicLinkSignIn
-                email={email}
-                onSuccess={handleMagicSuccess}
-                onCancel={() => setMagicMode(false)}
-                cancelLabel="Create account with password instead"
-                requestOnMount
-              />
-            ) : (
-              <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                {error && (
-                  <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-                )}
+          {error && (
+            <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          )}
 
-                <div>
-                  <label htmlFor="email" className="mb-1 block text-sm font-medium text-pine-800">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleMagicLinkClick}
-                    className="mt-1.5 cursor-pointer text-sm text-pine-600 hover:text-pine-900"
-                  >
-                    Email me a magic link instead
-                  </button>
-                </div>
+          {loading && searchParams.get('token') ? (
+            <p className="mt-6 text-sm text-pine-600">Creating your account...</p>
+          ) : !tokenRequested ? (
+            <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="email" className="mb-1 block text-sm font-medium text-pine-800">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestMagicLink}
+                  disabled={requestingToken || !email.trim()}
+                  className="mt-1.5 cursor-pointer text-sm text-pine-600 hover:text-pine-900 disabled:opacity-50"
+                >
+                  {requestingToken ? 'Sending...' : 'Email me a magic link instead'}
+                </button>
+              </div>
 
-                <div>
-                  <label htmlFor="password" className="mb-1 block text-sm font-medium text-pine-800">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
-                  />
-                </div>
+              <div>
+                <label htmlFor="password" className="mb-1 block text-sm font-medium text-pine-800">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                />
+              </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Create account'}
-                </Button>
-              </form>
-            )}
-          </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creating account...' : 'Create account'}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleMagicCodeSubmit} className="mt-6 space-y-4">
+              <p className="rounded-md bg-pine-50 px-3 py-2 text-sm text-pine-700">
+                We sent a sign-in link and 6-digit code to <strong>{email}</strong>.
+                Check your email or enter the code below.
+              </p>
+
+              <div>
+                <label htmlFor="magic-code" className="mb-1 block text-sm font-medium text-pine-800">
+                  Sign-in code
+                </label>
+                <input
+                  id="magic-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                  required
+                  className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm tracking-widest focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                  placeholder="123456"
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+                {loading ? 'Signing in...' : 'Complete sign-up with code'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTokenRequested(false);
+                  setCode('');
+                  setError('');
+                }}
+                className="w-full cursor-pointer text-sm text-pine-600 hover:text-pine-900"
+              >
+                Create account with password instead
+              </button>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-sm text-pine-600">
             Already have an account?{' '}

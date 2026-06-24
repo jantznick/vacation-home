@@ -57,14 +57,12 @@ model User {
   searchesCreated Search[]     @relation("SearchesCreated")
 }
 
-model LoginToken {
-  id        String    @id @default(uuid())
+model MagicToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
   email     String
-  tokenHash String    @unique
-  codeHash  String
   expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([email])
   @@index([expiresAt])

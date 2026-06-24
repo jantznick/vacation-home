@@ -22,6 +22,9 @@ export default function RouteMap({
   const [routeError, setRouteError] = useState('');
   const [loadingRoute, setLoadingRoute] = useState(false);
 
+  const destLat = destination?.latitude;
+  const destLng = destination?.longitude;
+
   useEffect(() => {
     let cancelled = false;
 
@@ -43,23 +46,31 @@ export default function RouteMap({
     return () => {
       cancelled = true;
     };
-  }, [api]);
+  }, [api, searchId]);
 
   const destinationMarker = useMemo(() => {
-    if (destination?.latitude == null || destination?.longitude == null) {
+    if (destLat == null || destLng == null) {
       return null;
     }
 
     return {
       id: `dest-${destination.id || destinationType}`,
       type: destinationType,
-      latitude: destination.latitude,
-      longitude: destination.longitude,
+      latitude: destLat,
+      longitude: destLng,
       label: destinationLabel,
       sublabel: destinationSublabel,
       href: destinationHref,
     };
-  }, [destination, destinationType, destinationLabel, destinationSublabel, destinationHref]);
+  }, [
+    destLat,
+    destLng,
+    destination?.id,
+    destinationType,
+    destinationLabel,
+    destinationSublabel,
+    destinationHref,
+  ]);
 
   const poiMarker = useMemo(
     () => buildPoiMarker(primaryPoi, searchId),
@@ -75,26 +86,26 @@ export default function RouteMap({
     if (
       radiusMiles == null
       || radiusMiles <= 0
-      || destination?.latitude == null
-      || destination?.longitude == null
+      || destLat == null
+      || destLng == null
     ) {
       return [];
     }
 
     return [{
       id: `radius-${destination.id}`,
-      latitude: destination.latitude,
-      longitude: destination.longitude,
+      latitude: destLat,
+      longitude: destLng,
       radiusMeters: radiusMiles * 1609.34,
       color: '#2563eb',
     }];
-  }, [radiusMiles, destination]);
+  }, [radiusMiles, destLat, destLng, destination?.id]);
 
   useEffect(() => {
     if (!poiMarker || !destinationMarker) {
       setRoutePoints(null);
       setRouteError('');
-      return;
+      return undefined;
     }
 
     let cancelled = false;
@@ -132,10 +143,10 @@ export default function RouteMap({
   }, [
     api,
     primaryPoi?.id,
-    poiMarker?.latitude,
-    poiMarker?.longitude,
-    destinationMarker?.latitude,
-    destinationMarker?.longitude,
+    poiMarker,
+    destinationMarker,
+    destLat,
+    destLng,
   ]);
 
   return (

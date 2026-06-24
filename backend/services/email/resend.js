@@ -1,3 +1,5 @@
+import { inviteEmail, magicLinkEmail } from './templates.js';
+
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
 export function isResendConfigured() {
@@ -10,6 +12,8 @@ export async function sendInviteEmail({ to, searchName, inviteUrl, inviterEmail 
     return { skipped: true };
   }
 
+  const { html, text } = inviteEmail({ searchName, inviteUrl, inviterEmail });
+
   const response = await fetch(RESEND_API_URL, {
     method: 'POST',
     headers: {
@@ -20,11 +24,8 @@ export async function sendInviteEmail({ to, searchName, inviteUrl, inviterEmail 
       from: process.env.RESEND_FROM_EMAIL,
       to: [to],
       subject: `You're invited to collaborate on "${searchName}"`,
-      html: `
-        <p>${inviterEmail} invited you to collaborate on <strong>${searchName}</strong> on My Vacation Home Search.</p>
-        <p><a href="${inviteUrl}">Accept invitation</a></p>
-        <p>This link expires in 7 days. If you don't have an account yet, you'll be asked to register first.</p>
-      `,
+      html,
+      text,
     }),
   });
 
@@ -42,6 +43,8 @@ export async function sendMagicLinkEmail({ to, loginUrl, code, expiresMinutes = 
     return { skipped: true };
   }
 
+  const { html, text } = magicLinkEmail({ loginUrl, code, expiresMinutes });
+
   const response = await fetch(RESEND_API_URL, {
     method: 'POST',
     headers: {
@@ -52,12 +55,8 @@ export async function sendMagicLinkEmail({ to, loginUrl, code, expiresMinutes = 
       from: process.env.RESEND_FROM_EMAIL,
       to: [to],
       subject: 'Your sign-in link for My Vacation Home Search',
-      html: `
-        <p>Use this link to sign in to My Vacation Home Search:</p>
-        <p><a href="${loginUrl}">Sign in</a></p>
-        <p>Or enter this code on the sign-in page: <strong>${code}</strong></p>
-        <p>This expires in ${expiresMinutes} minutes. If you didn't request this, you can ignore this email.</p>
-      `,
+      html,
+      text,
     }),
   });
 
