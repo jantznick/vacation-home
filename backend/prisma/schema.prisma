@@ -328,7 +328,7 @@ model PricingModel {
   name        String
   description String?
   features    Json      @db.JsonB
-  algorithm   String    @default("linear_regression")
+  algorithm   String    @default("log_size_linear_regression")
   modelData   Json?     @db.JsonB
   sampleCount Int?
   trainedAt   DateTime?

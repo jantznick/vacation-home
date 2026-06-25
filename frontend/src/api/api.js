@@ -167,6 +167,12 @@ export function createSearchAPI(searchId) {
           method: 'POST',
           body: JSON.stringify(spec),
         }),
+      sensitivity: (body) =>
+        request(`${base}/pricing-models/sensitivity`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      fit: (id) => request(`${base}/pricing-models/${id}/fit`),
       predict: (id, listingId) =>
         request(`${base}/pricing-models/${id}/predict`, {
           method: 'POST',

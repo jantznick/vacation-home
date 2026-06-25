@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import ConfirmModal from '../components/ConfirmModal';
 import FormField from '../components/FormField';
+import ModelFitPanel from '../components/ModelFitPanel';
 
 const FALLBACK_FEATURES = [
   'acres',
@@ -16,6 +17,12 @@ const FALLBACK_FEATURES = [
   'waterfront',
   'region',
 ];
+
+const FALLBACK_ALGORITHM = 'log_size_linear_regression';
+
+function algorithmLabel(algorithms, key) {
+  return algorithms.find((item) => item.key === key)?.label ?? 'Straight-line';
+}
 
 function segmentSummary(modelData) {
   const segments = modelData?.segments;
@@ -48,7 +55,9 @@ export default function PricingModels() {
   const { canEdit } = useSearchAccess();
   const [models, setModels] = useState([]);
   const [features, setFeatures] = useState([]);
+  const [algorithms, setAlgorithms] = useState([]);
   const [defaultFeatures, setDefaultFeatures] = useState(FALLBACK_FEATURES);
+  const [defaultAlgorithm, setDefaultAlgorithm] = useState(FALLBACK_ALGORITHM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -59,6 +68,7 @@ export default function PricingModels() {
     name: '',
     description: '',
     features: FALLBACK_FEATURES,
+    algorithm: FALLBACK_ALGORITHM,
     isDefault: true,
   });
 
@@ -71,6 +81,16 @@ export default function PricingModels() {
       ]);
       setModels(modelsData.models);
       setFeatures(featuresData.features);
+      if (featuresData.algorithms?.length) {
+        setAlgorithms(featuresData.algorithms);
+      }
+      if (featuresData.defaultAlgorithm) {
+        setDefaultAlgorithm(featuresData.defaultAlgorithm);
+        setForm((current) => ({
+          ...current,
+          algorithm: current.algorithm || featuresData.defaultAlgorithm,
+        }));
+      }
       if (featuresData.defaultFeatures?.length) {
         setDefaultFeatures(featuresData.defaultFeatures);
         setForm((current) => ({
@@ -109,6 +129,7 @@ export default function PricingModels() {
         name: '',
         description: '',
         features: defaultFeatures,
+        algorithm: defaultAlgorithm,
         isDefault: models.length === 0,
       });
       await load();
@@ -201,6 +222,35 @@ export default function PricingModels() {
           </div>
 
           <div>
+            <p className="mb-2 text-sm font-medium text-pine-800">Estimation style</p>
+            <div className="space-y-2">
+              {algorithms.map((option) => (
+                <label
+                  key={option.key}
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 text-sm ${
+                    form.algorithm === option.key
+                      ? 'border-pine-400 bg-pine-50'
+                      : 'border-pine-200'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="algorithm"
+                    value={option.key}
+                    checked={form.algorithm === option.key}
+                    onChange={() => setForm({ ...form, algorithm: option.key })}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-medium text-pine-900">{option.label}</span>
+                    <span className="mt-1 block text-xs text-pine-600">{option.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <p className="mb-2 text-sm font-medium text-pine-800">Features</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {features.map((feature) => (
@@ -268,6 +318,9 @@ export default function PricingModels() {
                       <p className="mt-1 text-sm text-pine-600">{model.description}</p>
                     )}
                     <p className="mt-2 text-xs text-pine-500">
+                      Style: {algorithmLabel(algorithms, model.algorithm || defaultAlgorithm)}
+                    </p>
+                    <p className="mt-1 text-xs text-pine-500">
                       Features: {(model.features || []).join(', ')}
                     </p>
                     <p className="mt-1 text-xs text-pine-500">
@@ -326,6 +379,12 @@ export default function PricingModels() {
                     Waiting for 3+ listings with list prices to train segments.
                   </p>
                 )}
+
+                <ModelFitPanel
+                  api={api}
+                  modelId={model.id}
+                  trained={Boolean(model.trainedAt && segments.all)}
+                />
               </Card>
             );
           })}

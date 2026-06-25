@@ -7,6 +7,8 @@ import {
   listPricingModels,
   predictListingPrice,
   predictFromSpec,
+  computePricePickerSensitivity,
+  getPricingModelFitFeedback,
   trainPricingModel,
   updatePricingModel,
 } from '../services/pricing/index.js';
@@ -41,6 +43,48 @@ router.post('/estimate', async (req, res) => {
   }
 });
 
+router.post('/sensitivity', async (req, res) => {
+  try {
+    const searchId = searchIdFrom(req);
+    const { modelId, variable, spec, anyFeatures } = req.body || {};
+
+    if (!variable) {
+      return res.status(400).json({ error: 'variable is required' });
+    }
+
+    const result = await computePricePickerSensitivity(searchId, {
+      spec: spec || {},
+      variable,
+      modelId: modelId || null,
+      anyFeatures: anyFeatures || [],
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Price picker sensitivity error:', error);
+    res.status(422).json({ error: error.message || 'Failed to compute sensitivity curve' });
+  }
+});
+
+router.get('/:id/fit', async (req, res) => {
+  try {
+    const searchId = searchIdFrom(req);
+    const existing = await getPricingModelInSearch(searchId, req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Pricing model not found' });
+    }
+
+    const feedback = await getPricingModelFitFeedback(searchId, req.params.id);
+    if (!feedback) {
+      return res.status(404).json({ error: 'Pricing model not found' });
+    }
+
+    res.json(feedback);
+  } catch (error) {
+    console.error('Pricing model fit feedback error:', error);
+    res.status(500).json({ error: 'Failed to load model fit feedback' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const model = await getPricingModelInSearch(searchIdFrom(req), req.params.id);
@@ -56,7 +100,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, features, isDefault } = req.body;
+    const { name, description, features, algorithm, isDefault } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ error: 'Name is required' });
@@ -67,6 +111,7 @@ router.post('/', async (req, res) => {
       name,
       description,
       features,
+      algorithm,
       isDefault,
     });
 

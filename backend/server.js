@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import cookieParser from 'cookie-parser';
 
 import prisma from './lib/prisma.js';
+import { migratePricingModelsOnStartup } from './services/pricing/index.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import searchRoutes, { publicSearchRoutes } from './routes/searches.js';
@@ -78,6 +79,9 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+  migratePricingModelsOnStartup().catch((error) => {
+    console.error('Pricing model startup migration failed:', error);
+  });
 });
 
 async function shutdown() {

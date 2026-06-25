@@ -13,6 +13,7 @@ const navItems = (searchId) => [
   { to: searchPath(searchId, '/listings'), label: 'Listings' },
   { to: searchPath(searchId, '/map'), label: 'Map' },
   { to: searchPath(searchId, '/estimator'), label: 'Estimator' },
+  { to: searchPath(searchId, '/price-picker'), label: 'Price picker' },
   { to: searchPath(searchId, '/settings'), label: 'Settings' },
 ];
 

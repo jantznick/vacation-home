@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import MarketingLayout from '../components/MarketingLayout';
 import MarketingPricingDemo from '../components/MarketingPricingDemo';
+import MarketingPricePickerDemo from '../components/MarketingPricePickerDemo';
 import MarketingFeatureIcon from '../components/MarketingFeatureIcon';
 import MarketingLink from '../components/MarketingLink';
 import VacationTypeSelector, { getStoredScenarioId } from '../components/VacationTypeSelector';
@@ -84,11 +85,11 @@ export default function Home() {
                 Start free
               </MarketingLink>
               <MarketingLink
-                href="#pricing"
+                href="#price-picker"
                 variant="secondary"
                 className={`min-h-12 px-6 text-base ${theme.secondaryBtn}`}
               >
-                How it works
+                Try price picker
               </MarketingLink>
             </div>
             <p className="mt-4 text-sm text-pine-500">
@@ -110,6 +111,46 @@ export default function Home() {
               />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Price picker */}
+      <section id="price-picker" className={`scroll-mt-20 border-b ${theme.heroBorder} ${theme.pageBg}`}>
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+          <div className="mx-auto max-w-3xl text-center" key={`picker-intro-${scenarioId}`}>
+            <p className="text-sm font-medium uppercase tracking-wide text-pine-500">
+              Explore before you save listings
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-pine-950 sm:text-4xl">
+              See how price moves — and how regions compare
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-pine-600">
+              Price picker holds your dream property steady while you slide one detail at a time.
+              With multiple regions selected, <strong className="font-medium text-pine-800">steeper lines mean that variable matters more there</strong> — the same acre or waterfront flag can mean something different in Eagle River vs Minocqua, Destin vs 30A, or Breckenridge vs Keystone.
+              {' '}{scenario.pricePickerBlurb}
+            </p>
+          </div>
+
+          <div className="relative mt-10">
+            <div
+              className={`pointer-events-none absolute -inset-3 rounded-3xl bg-gradient-to-br blur-2xl sm:-inset-6 ${theme.heroGlow}`}
+              aria-hidden
+            />
+            <MarketingPricePickerDemo
+              key={scenarioId}
+              scenarioId={scenarioId}
+              theme={theme}
+              className="relative"
+            />
+          </div>
+
+          <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-pine-500">
+            Demo uses illustrative {scenario.label.toLowerCase()} numbers. After you sign up, curves
+            train on the listings you save.{' '}
+            <a href="#pricing" className="font-medium text-pine-700 underline hover:text-pine-900">
+              How pricing models work
+            </a>
+          </p>
         </div>
       </section>
 

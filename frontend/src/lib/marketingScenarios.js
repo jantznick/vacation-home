@@ -147,6 +147,7 @@ export const MARKETING_SCENARIOS = {
     pricingInsight:
       'Vacation markets are thin. A big spread on a cabin might be normal — or a red flag — depending on frontage, road noise, and what else you\'ve saved nearby.',
     ctaHeadline: 'Start building your comp library',
+    pricePickerBlurb: 'On a north woods search, compare Eagle River vs Minocqua while you sweep acres on a lake lot.',
     demo: {
       title: '4BR on Long Lake · Eagle River, WI',
       listPrice: '$425,000',
@@ -247,6 +248,7 @@ export const MARKETING_SCENARIOS = {
     pricingInsight:
       'Coastal ask prices swing with elevation, flood zone, rental history, and distance from the water. A national estimate rarely captures the block-by-block reality in the markets you\'re tracking.',
     ctaHeadline: 'Start building your comp library',
+    pricePickerBlurb: 'On a coastal search, see how gulf-view premiums and square footage stack up across Destin and 30A.',
     demo: {
       title: '3BR Gulf-view · Destin, FL',
       listPrice: '$875,000',
@@ -347,6 +349,7 @@ export const MARKETING_SCENARIOS = {
     pricingInsight:
       'Mountain towns price on lift proximity, rental restrictions, and elevation as much as square footage. Your comp library learns what premium is normal in the resort markets you track.',
     ctaHeadline: 'Start building your comp library',
+    pricePickerBlurb: 'On a ski-town search, compare Breckenridge vs Keystone as house size and year built move the estimate.',
     demo: {
       title: '4BR Slopeside · Breckenridge, CO',
       listPrice: '$1,195,000',

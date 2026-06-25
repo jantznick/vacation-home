@@ -17,6 +17,7 @@ import ListingDetail from './pages/ListingDetail';
 import ListingForm from './pages/ListingForm';
 import PricingModels from './pages/PricingModels';
 import DreamEstimator from './pages/DreamEstimator';
+import PricePicker from './pages/PricePicker';
 import Profile from './pages/Profile';
 import MapOverview from './pages/MapOverview';
 import SearchSettings from './pages/SearchSettings';
@@ -84,6 +85,7 @@ export default function App() {
       <Route path="/searches/:searchId/listings/:id" element={<SearchLayout><ListingDetail /></SearchLayout>} />
       <Route path="/searches/:searchId/pricing-models" element={<SearchLayout><PricingModels /></SearchLayout>} />
       <Route path="/searches/:searchId/estimator" element={<SearchLayout><DreamEstimator /></SearchLayout>} />
+      <Route path="/searches/:searchId/price-picker" element={<SearchLayout><PricePicker /></SearchLayout>} />
       <Route path="/searches/:searchId/map" element={<SearchLayout><MapOverview /></SearchLayout>} />
       <Route path="/searches/:searchId/settings" element={<SearchLayout><SearchSettings /></SearchLayout>} />
       <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
