@@ -1,6 +1,7 @@
 import { fitPricingRegression, leaveOneOutMae, loadPricingRegression } from '../../lib/pricingRegression.js';
 import prisma from '../../lib/prisma.js';
 import { serializeListing } from '../../lib/listingHelpers.js';
+import { trainingListPrice } from '../../lib/listingBrowse.js';
 import { compCriteriaDescription, findComps } from '../../lib/listingAnalysis.js';
 import {
   PRICING_FEATURE_CATALOG,
@@ -151,8 +152,10 @@ function segmentAlgorithm(segment, modelAlgorithm = DEFAULT_PRICING_ALGORITHM) {
 
 function normalizeListingForPricing(listing) {
   const serialized = serializeListing(listing);
+  const listPrice = trainingListPrice(serialized);
   return {
     ...serialized,
+    listPrice,
     sqftLiving: serialized.isVacantLot ? 0 : serialized.sqftLiving,
   };
 }
@@ -466,7 +469,7 @@ export function getSimilarRetrainTargets(changedListingIds, allListings) {
 }
 
 function pricedListings(listings) {
-  return listings.filter((listing) => listing.listPrice != null);
+  return listings.filter((listing) => trainingListPrice(listing) != null);
 }
 
 function trainSimilarSegment(targetListing, allListings, features, algorithm = DEFAULT_PRICING_ALGORITHM) {
@@ -1003,6 +1006,7 @@ function buildSyntheticListing(searchId, region, spec) {
     bathrooms: vacant ? null : (spec.bathrooms ?? null),
     waterfront: spec.waterfront == null ? null : Boolean(spec.waterfront),
     yearBuilt: vacant ? null : (spec.yearBuilt ?? null),
+    daysOnMarket: spec.daysOnMarket ?? null,
     region: region ? { id: region.id, name: region.name } : null,
   });
 }

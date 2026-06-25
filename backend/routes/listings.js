@@ -25,6 +25,10 @@ import {
 import { previewListingFromUrl } from '../services/ingest/index.js';
 import { refreshListingFromSource } from '../services/listings/refreshFromSource.js';
 import { staleListingCutoff } from '../lib/listingFreshness.js';
+import {
+  applyBrowseListingFilter,
+  BROWSE_EXCLUDED_STATUSES,
+} from '../lib/listingBrowse.js';
 
 const router = express.Router();
 
@@ -42,9 +46,6 @@ function buildListingWhere(searchId, query) {
   if (query.lakeId) {
     where.lakeId = query.lakeId;
   }
-  if (query.status) {
-    where.status = query.status;
-  }
   if (query.isVacantLot !== undefined) {
     where.isVacantLot = query.isVacantLot === 'true';
   }
@@ -60,6 +61,8 @@ function buildListingWhere(searchId, query) {
       { fetchedAt: { lt: cutoff } },
     ];
   }
+
+  applyBrowseListingFilter(where, query);
 
   return where;
 }
@@ -134,6 +137,7 @@ router.post('/refresh-bulk', async (req, res) => {
         where: {
           searchId,
           sourceUrl: { contains: 'zillow.com' },
+          status: { notIn: BROWSE_EXCLUDED_STATUSES },
           ...(staleOnly
             ? {
               OR: [

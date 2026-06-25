@@ -1,10 +1,12 @@
 import prisma from '../../lib/prisma.js';
 import { serializeListing } from '../../lib/listingHelpers.js';
+import { BROWSE_EXCLUDED_STATUSES } from '../../lib/listingBrowse.js';
 
 export async function getPriceDrops(searchId) {
   const listings = await prisma.listing.findMany({
     where: {
       searchId,
+      status: { notIn: BROWSE_EXCLUDED_STATUSES },
       snapshots: {
         some: {},
       },

@@ -222,6 +222,14 @@ export default function ListingForm() {
     }
   };
 
+  const handleSoldCompToggle = (event) => {
+    const checked = event.target.checked;
+    setForm((current) => ({
+      ...current,
+      status: checked ? 'sold' : (current.status === 'sold' ? 'active' : current.status),
+    }));
+  };
+
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
 
@@ -429,6 +437,34 @@ export default function ListingForm() {
                 </select>
               </FormField>
             </div>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-lg font-medium text-pine-900">Sold comp</h2>
+            <label className="flex items-center gap-2 text-sm text-pine-800">
+              <input
+                type="checkbox"
+                name="isSoldComp"
+                checked={form.status === 'sold'}
+                onChange={handleSoldCompToggle}
+              />
+              Sold comp (not for sale)
+            </label>
+            <p className="text-xs text-pine-500">
+              Import from Zillow, then mark as sold to hide from listings, map, and dashboard while still training pricing models.
+            </p>
+            {form.status === 'sold' && (
+              <FormField label="Sold price ($)" htmlFor="soldPrice">
+                <input
+                  id="soldPrice"
+                  name="soldPrice"
+                  type="number"
+                  value={form.soldPrice}
+                  onChange={handleChange}
+                  className={inputClass}
+                />
+              </FormField>
+            )}
           </section>
 
           <section className="space-y-4">

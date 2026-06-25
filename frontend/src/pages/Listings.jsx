@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
 import Card from '../components/Card';
-import ClickableCard from '../components/ClickableCard';
+import SoldCompCard from '../components/SoldCompCard';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import {
@@ -33,6 +33,7 @@ export default function Listings() {
   const regionId = searchParams.get('regionId') || '';
   const isVacantLot = searchParams.get('isVacantLot') || '';
   const status = searchParams.get('status') || '';
+  const showAll = searchParams.get('showAll') === 'true';
   const needsRefresh = searchParams.get('needsRefresh') || '';
   const sortBy = searchParams.get('sortBy') || 'createdAt';
   const sortDir = searchParams.get('sortDir') || 'desc';
@@ -58,6 +59,7 @@ export default function Listings() {
         if (regionId) filters.regionId = regionId;
         if (isVacantLot) filters.isVacantLot = isVacantLot;
         if (status) filters.status = status;
+        else if (showAll) filters.includeSold = 'true';
         if (needsRefresh) filters.needsRefresh = needsRefresh;
         if (sortBy) filters.sortBy = sortBy;
         if (sortDir) filters.sortDir = sortDir;
@@ -76,13 +78,14 @@ export default function Listings() {
     };
 
     loadListings();
-  }, [api, regionId, isVacantLot, status, needsRefresh, sortBy, sortDir]);
+  }, [api, regionId, isVacantLot, status, showAll, needsRefresh, sortBy, sortDir]);
 
   const reloadListings = async () => {
     const filters = {};
     if (regionId) filters.regionId = regionId;
     if (isVacantLot) filters.isVacantLot = isVacantLot;
     if (status) filters.status = status;
+    else if (showAll) filters.includeSold = 'true';
     if (needsRefresh) filters.needsRefresh = needsRefresh;
     if (sortBy) filters.sortBy = sortBy;
     if (sortDir) filters.sortDir = sortDir;
@@ -134,7 +137,7 @@ export default function Listings() {
     <div>
       <PageHeader
         title="Listings"
-        description="Individual properties you're tracking — vacant lots and homes with structures."
+        description="Properties you're actively researching. Sold comps stay in pricing models but are hidden here by default."
         actions={canEdit ? (
           <>
             {staleCount > 0 && (
@@ -179,14 +182,21 @@ export default function Listings() {
           <div>
             <label className="mb-1 block text-sm font-medium text-pine-800">Status</label>
             <select
-              value={status}
-              onChange={(e) => updateFilter('status', e.target.value)}
+              value={status === 'sold' ? 'sold' : showAll ? '__all__' : ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                const next = new URLSearchParams(searchParams);
+                next.delete('status');
+                next.delete('showAll');
+                if (value === 'sold') next.set('status', 'sold');
+                else if (value === '__all__') next.set('showAll', 'true');
+                setSearchParams(next);
+              }}
               className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
             >
-              <option value="">All statuses</option>
-              {LISTING_STATUSES.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
+              <option value="">Active research</option>
+              <option value="sold">Sold comps</option>
+              <option value="__all__">All statuses</option>
             </select>
           </div>
           <div>
@@ -241,7 +251,7 @@ export default function Listings() {
       ) : (
         <div className="space-y-3">
           {listings.map((listing) => (
-            <ClickableCard key={listing.id} to={searchPath(searchId, `/listings/${listing.id}`)}>
+            <SoldCompCard key={listing.id} listing={listing} to={searchPath(searchId, `/listings/${listing.id}`)}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -266,7 +276,11 @@ export default function Listings() {
                 </div>
                 <div className="space-y-1 text-right">
                   <p className="text-lg font-semibold tabular-nums text-pine-900">
-                    {formatCurrency(listing.listPrice)}
+                    {formatCurrency(
+                      listing.isSoldComp
+                        ? (listing.soldPrice ?? listing.listPrice)
+                        : listing.listPrice,
+                    )}
                   </p>
                   <ListingPriceSignal signal={listing.priceSignal} />
                   {listing.acres && (
@@ -277,7 +291,7 @@ export default function Listings() {
                   )}
                 </div>
               </div>
-            </ClickableCard>
+            </SoldCompCard>
           ))}
         </div>
       )}

@@ -86,7 +86,7 @@ export const PRICING_ALGORITHMS = {
 export const DEFAULT_PRICING_ALGORITHM = 'log_size_linear_regression';
 
 /** Bump when training output shape or default algorithm changes — triggers auto-retrain. */
-export const PRICING_TRAINING_PIPELINE_VERSION = 2;
+export const PRICING_TRAINING_PIPELINE_VERSION = 3;
 
 const LOG_SIZE_FEATURES = new Set(['acres', 'sqftLiving', 'sqftLot']);
 

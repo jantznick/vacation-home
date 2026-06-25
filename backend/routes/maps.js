@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js';
 import { hasCoordinates } from '../lib/location.js';
 import { searchIdFrom } from '../lib/searchScope.js';
 import { getDrivingRoute, isMapsConfigured } from '../services/maps/index.js';
+import { BROWSE_EXCLUDED_STATUSES } from '../lib/listingBrowse.js';
 
 const router = express.Router();
 
@@ -49,6 +50,7 @@ router.get('/overview', async (req, res) => {
           searchId,
           latitude: { not: null },
           longitude: { not: null },
+          status: { notIn: BROWSE_EXCLUDED_STATUSES },
         },
         select: {
           id: true,

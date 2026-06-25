@@ -12,7 +12,7 @@ const listingInclude = {
   lake: { select: { id: true, name: true } },
 };
 
-const RESEARCH_STATUSES = new Set(['interested', 'passed']);
+import { REFRESH_PROTECTED_STATUSES } from '../../lib/listingBrowse.js';
 
 export function buildRefreshUpdateData(existing, scrapedFields) {
   const scraped = scrapedFieldsToListingData(scrapedFields);
@@ -44,7 +44,7 @@ export function buildRefreshUpdateData(existing, scrapedFields) {
     fetchedAt: new Date(),
   };
 
-  if (!RESEARCH_STATUSES.has(existing.status)) {
+  if (!REFRESH_PROTECTED_STATUSES.has(existing.status)) {
     data.status = scraped.status ?? existing.status;
   }
 

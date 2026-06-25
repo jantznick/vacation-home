@@ -8,6 +8,7 @@ import {
   geocodeRegion,
   isMapsConfigured,
 } from '../lib/locationService.js';
+import { applyBrowseListingFilter } from '../lib/listingBrowse.js';
 
 const router = express.Router();
 
@@ -38,11 +39,15 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const searchId = searchIdFrom(req);
+    const listingWhere = {};
+    applyBrowseListingFilter(listingWhere, req.query);
+
     const region = await prisma.region.findFirst({
       where: { id: req.params.id, searchId },
       include: {
         lakes: { orderBy: { name: 'asc' } },
         listings: {
+          where: listingWhere,
           orderBy: { createdAt: 'desc' },
           include: { lake: { select: { id: true, name: true } } },
         },

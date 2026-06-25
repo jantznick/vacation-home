@@ -9,19 +9,44 @@ export function shouldUseRidgeRegression(sampleCount, featureCount) {
   return featureCount >= sampleCount - 2 || featureCount / sampleCount >= 0.5;
 }
 
-function medianValue(values) {
-  if (!values.length) {
+function averageFeatureDiagonal(rows, featureCount) {
+  if (!rows.length || featureCount === 0) {
+    return 1;
+  }
+
+  let sum = 0;
+  for (let featureIndex = 0; featureIndex < featureCount; featureIndex += 1) {
+    let diagonal = 0;
+    for (const row of rows) {
+      diagonal += row[featureIndex] * row[featureIndex];
+    }
+    sum += diagonal / rows.length;
+  }
+
+  return sum / featureCount;
+}
+
+function targetVariance(targets) {
+  if (targets.length < 2) {
     return 0;
   }
 
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)];
+  const mean = targets.reduce((sum, value) => sum + value, 0) / targets.length;
+  return targets.reduce((sum, value) => sum + (value - mean) ** 2, 0) / targets.length;
 }
 
-export function chooseRidgeLambda(targets, featureCount, sampleCount) {
-  const medianTarget = medianValue(targets);
+export function chooseRidgeLambda(rows, targets, featureCount, sampleCount) {
   const ratio = featureCount / sampleCount;
-  return Math.max((medianTarget * 0.05) ** 2 * ratio, 1);
+  const avgFeatureScale = averageFeatureDiagonal(rows, featureCount);
+  const variance = targetVariance(targets);
+
+  // Scale lambda to feature magnitudes — the old target-squared penalty collapsed
+  // coefficients to zero and produced a flat mean price for every profile.
+  return Math.max(
+    avgFeatureScale * ratio * 0.5,
+    variance * ratio * 1e-8,
+    0.01,
+  );
 }
 
 function solveLinearSystem(matrix, vector) {
@@ -135,7 +160,7 @@ export function fitPricingRegression(rows, targets) {
     };
   }
 
-  const lambda = chooseRidgeLambda(targets, featureCount, sampleCount);
+  const lambda = chooseRidgeLambda(rows, targets, featureCount, sampleCount);
   const weights = fitRidgeWeights(rows, targets, lambda);
 
   if (!weights) {

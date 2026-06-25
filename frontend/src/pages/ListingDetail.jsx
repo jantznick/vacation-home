@@ -213,6 +213,16 @@ export default function ListingDetail() {
         </p>
       )}
 
+      {listing.isSoldComp && (
+        <p className="mb-4 rounded-md border-2 border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+          <span className="mr-2 inline-block rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Sold
+          </span>
+          Hidden from active research views. Included in pricing model training
+          {listing.soldPrice != null ? ` at ${formatCurrency(listing.soldPrice)}` : ''}.
+        </p>
+      )}
+
       {listing.canRefresh && (
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-pine-600">
           <ListingStaleBadge listing={listing} />
@@ -256,9 +266,23 @@ export default function ListingDetail() {
                 </div>
               )}
               <div>
-                <dt className="text-xs uppercase tracking-wide text-pine-500">List price</dt>
-                <dd className="text-sm font-medium text-pine-900">{formatCurrency(listing.listPrice)}</dd>
+                <dt className="text-xs uppercase tracking-wide text-pine-500">
+                  {listing.isSoldComp ? 'Sold price' : 'List price'}
+                </dt>
+                <dd className="text-sm font-medium text-pine-900">
+                  {formatCurrency(
+                    listing.isSoldComp
+                      ? (listing.soldPrice ?? listing.listPrice)
+                      : listing.listPrice,
+                  )}
+                </dd>
               </div>
+              {listing.isSoldComp && listing.listPrice != null && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-pine-500">Last list price</dt>
+                  <dd className="text-sm text-pine-900">{formatCurrency(listing.listPrice)}</dd>
+                </div>
+              )}
               <div>
                 <dt className="text-xs uppercase tracking-wide text-pine-500">Type</dt>
                 <dd className="text-sm text-pine-900">

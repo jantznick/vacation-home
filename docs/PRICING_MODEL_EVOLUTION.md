@@ -161,3 +161,4 @@ When comparing algorithms on real searches:
 ## Related docs
 
 - [PRICING_UX_BACKLOG.md](./PRICING_UX_BACKLOG.md) — future pricing UX ideas
+- [LISTING_DATA_AND_PRICING_OVER_TIME.md](./LISTING_DATA_AND_PRICING_OVER_TIME.md) — refresh, sold listings, models over time

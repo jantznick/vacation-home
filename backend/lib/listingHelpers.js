@@ -1,4 +1,8 @@
 import { getListingFreshness } from './listingFreshness.js';
+import {
+  isSoldCompListing,
+  trainingListPrice,
+} from './listingBrowse.js';
 
 /**
  * Serialize a listing for API responses with derived metrics.
@@ -9,6 +13,8 @@ export function serializeListing(listing) {
   const soldPrice = listing.soldPrice != null ? Number(listing.soldPrice) : null;
   const acres = listing.acres != null ? Number(listing.acres) : null;
   const sqftLiving = listing.sqftLiving != null ? Number(listing.sqftLiving) : null;
+  const compPrice = trainingListPrice(listing);
+  const freshness = getListingFreshness(listing);
 
   return {
     ...rest,
@@ -16,9 +22,11 @@ export function serializeListing(listing) {
     soldPrice,
     acres,
     sqftLiving,
-    pricePerAcre: listPrice && acres ? Math.round(listPrice / acres) : null,
-    pricePerSqft: listPrice && sqftLiving ? Math.round(listPrice / sqftLiving) : null,
-    ...getListingFreshness(listing),
+    isSoldComp: isSoldCompListing(listing),
+    pricePerAcre: compPrice && acres ? Math.round(compPrice / acres) : null,
+    pricePerSqft: compPrice && sqftLiving ? Math.round(compPrice / sqftLiving) : null,
+    ...freshness,
+    canRefresh: freshness.canRefresh && !isSoldCompListing(listing),
   };
 }
 
