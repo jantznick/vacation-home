@@ -27,6 +27,7 @@ enum CommentTargetType {
   region
   lake
   listing
+  marina
 }
 
 enum SearchMemberRole {
@@ -112,11 +113,55 @@ model Search {
   invites       SearchInvite[]
   pois          PointOfInterest[]
   regions       Region[]
+  marinas       Marina[]
   boatMakes     BoatMake[]
   listings      Listing[]
   pricingModels PricingModel[]
 
   @@index([assetType])
+}
+
+/// Search-scoped marina — the boat equivalent of a Region.
+model Marina {
+  id                 String   @id @default(uuid())
+  searchId           String
+  name               String
+  slug               String
+  description        String?
+  address            String?
+  city               String?
+  state              String?
+  latitude           Float?
+  longitude          Float?
+  driveTimeMinutes   Int?
+  driveDistanceMiles Float?
+  website            String?
+  /// Slip pricing options — JSON array of { name, feeType, feeAmount, feePeriod, maxLengthFt?, notes? }.
+  slipOptions        Json?    @db.JsonB
+  /// Annual winter haul-out + storage cost.
+  winterStorageCost  Int?
+  liveaboardAllowed  Boolean  @default(false)
+  /// Month marina opens (1-12), null if year-round.
+  seasonOpen         Int?
+  /// Month marina closes (1-12), null if year-round.
+  seasonClose        Int?
+  yearRound          Boolean  @default(true)
+  /// Free-text amenities (fuel, pumpout, electric, showers, etc.).
+  amenities          String?
+  maxLengthFt        Float?
+  maxDraftFt         Float?
+  pros               String?
+  cons               String?
+  notes              String?
+  overallScore       Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  search   Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  listings Listing[]
+
+  @@unique([searchId, slug])
+  @@index([searchId])
 }
 
 /// Search-scoped boat manufacturer notes (pros/cons cascade onto listings).
@@ -349,6 +394,8 @@ model Listing {
   cons               String?
   notes              String?
   interestLevel      Int?
+  shortlisted        Boolean         @default(false)
+  shortlistRank      Int?
   visited            Boolean         @default(false)
   visitNotes         String?
   listingDate        DateTime?
@@ -367,6 +414,9 @@ model Listing {
   lakeId String?
   lake   Lake?   @relation(fields: [lakeId], references: [id], onDelete: SetNull)
 
+  marinaId String?
+  marina   Marina? @relation(fields: [marinaId], references: [id], onDelete: SetNull)
+
   boatMakeId String?
   boatMake   BoatMake? @relation(fields: [boatMakeId], references: [id], onDelete: SetNull)
 
@@ -379,11 +429,13 @@ model Listing {
   @@index([searchId])
   @@index([regionId])
   @@index([lakeId])
+  @@index([marinaId])
   @@index([boatMakeId])
   @@index([boatModelId])
   @@index([isVacantLot])
   @@index([status])
   @@index([propulsion])
+  @@index([shortlisted])
 }
 
 model ListingCommute {

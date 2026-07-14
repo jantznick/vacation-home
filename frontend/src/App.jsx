@@ -25,6 +25,10 @@ import PricePicker from './pages/PricePicker';
 import Profile from './pages/Profile';
 import MapOverview from './pages/MapOverview';
 import SearchSettings from './pages/SearchSettings';
+import CompareBoard from './pages/CompareBoard';
+import Marinas from './pages/Marinas';
+import MarinaForm from './pages/MarinaForm';
+import MarinaDetail from './pages/MarinaDetail';
 import Admin from './pages/Admin';
 import AdminRoute from './components/AdminRoute';
 import HomeRoute from './components/HomeRoute';
@@ -88,10 +92,15 @@ export default function App() {
       <Route path="/searches/:searchId/makes/:id/edit" element={<SearchLayout><BoatMakeForm /></SearchLayout>} />
       <Route path="/searches/:searchId/makes/:makeId/models/:modelId" element={<SearchLayout><BoatModelDetail /></SearchLayout>} />
       <Route path="/searches/:searchId/makes/:id" element={<SearchLayout><BoatMakeDetail /></SearchLayout>} />
+      <Route path="/searches/:searchId/marinas" element={<SearchLayout><Marinas /></SearchLayout>} />
+      <Route path="/searches/:searchId/marinas/new" element={<SearchLayout><MarinaForm /></SearchLayout>} />
+      <Route path="/searches/:searchId/marinas/:id/edit" element={<SearchLayout><MarinaForm /></SearchLayout>} />
+      <Route path="/searches/:searchId/marinas/:id" element={<SearchLayout><MarinaDetail /></SearchLayout>} />
       <Route path="/searches/:searchId/listings" element={<SearchLayout><Listings /></SearchLayout>} />
       <Route path="/searches/:searchId/listings/new" element={<SearchLayout><ListingForm /></SearchLayout>} />
       <Route path="/searches/:searchId/listings/:id/edit" element={<SearchLayout><ListingForm /></SearchLayout>} />
       <Route path="/searches/:searchId/listings/:id" element={<SearchLayout><ListingDetail /></SearchLayout>} />
+      <Route path="/searches/:searchId/compare" element={<SearchLayout><CompareBoard /></SearchLayout>} />
       <Route path="/searches/:searchId/pricing-models" element={<SearchLayout><PricingModels /></SearchLayout>} />
       <Route path="/searches/:searchId/estimator" element={<SearchLayout><DreamEstimator /></SearchLayout>} />
       <Route path="/searches/:searchId/price-picker" element={<SearchLayout><PricePicker /></SearchLayout>} />

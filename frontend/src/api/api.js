@@ -118,6 +118,15 @@ export function createSearchAPI(searchId) {
         request(`${base}/lakes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
       remove: (id) => request(`${base}/lakes/${id}`, { method: 'DELETE' }),
     },
+    marinas: {
+      list: () => request(`${base}/marinas`),
+      get: (id) => request(`${base}/marinas/${id}`),
+      create: (data) =>
+        request(`${base}/marinas`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (id, data) =>
+        request(`${base}/marinas/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      remove: (id) => request(`${base}/marinas/${id}`, { method: 'DELETE' }),
+    },
     boatMakes: {
       list: () => request(`${base}/boat-makes`),
       get: (id) => request(`${base}/boat-makes/${id}`),

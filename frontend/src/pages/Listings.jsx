@@ -20,6 +20,7 @@ import { showError, showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, supportsRegions } from '../lib/assetTypes';
 import { formatBoatTitle } from '../lib/boatTitle';
 import CriteriaFitBadge from '../components/CriteriaFitBadge';
+import ShortlistStar from '../components/ShortlistStar';
 
 function listingTitle(listing, boat) {
   if (boat) {
@@ -43,6 +44,8 @@ export default function Listings() {
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [staleCount, setStaleCount] = useState(0);
+
+  const shortlistCount = listings.filter((l) => l.shortlisted).length;
 
   const regionId = searchParams.get('regionId') || '';
   const isVacantLot = searchParams.get('isVacantLot') || '';
@@ -162,6 +165,18 @@ export default function Listings() {
     }
   };
 
+  const toggleShortlist = async (listing) => {
+    const next = !listing.shortlisted;
+    try {
+      const data = await api.listings.update(listing.id, { shortlisted: next });
+      setListings((prev) =>
+        prev.map((l) => (l.id === listing.id ? { ...l, ...data.listing } : l)),
+      );
+    } catch (err) {
+      showError(err.message);
+    }
+  };
+
   const updateFilter = (key, value) => {
     const next = new URLSearchParams(searchParams);
     if (value) {
@@ -181,18 +196,27 @@ export default function Listings() {
             ? 'Boats you’re researching. Sold listings stay available for pricing but stay out of the main list.'
             : 'Properties you’re researching. Sold listings stay available for pricing but stay out of the main list.'
         }
-        actions={canEdit ? (
+        actions={
           <>
-            {homeMode && staleCount > 0 && (
-              <Button variant="secondary" onClick={handleBulkRefresh} disabled={refreshing}>
-                {refreshing ? 'Refreshing...' : `Refresh stale (${staleCount})`}
-              </Button>
+            {shortlistCount > 0 && (
+              <Link to={searchPath(searchId, '/compare')}>
+                <Button variant="secondary">Compare shortlisted ({shortlistCount})</Button>
+              </Link>
             )}
-            <Link to={searchPath(searchId, '/listings/new')}>
-              <Button>{boatMode ? 'Add boat' : 'Add listing'}</Button>
-            </Link>
+            {canEdit && (
+              <>
+                {homeMode && staleCount > 0 && (
+                  <Button variant="secondary" onClick={handleBulkRefresh} disabled={refreshing}>
+                    {refreshing ? 'Refreshing...' : `Refresh stale (${staleCount})`}
+                  </Button>
+                )}
+                <Link to={searchPath(searchId, '/listings/new')}>
+                  <Button>{boatMode ? 'Add boat' : 'Add listing'}</Button>
+                </Link>
+              </>
+            )}
           </>
-        ) : undefined}
+        }
       />
 
       <Card className="mb-6">
@@ -332,6 +356,11 @@ export default function Listings() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <ShortlistStar
+                      active={listing.shortlisted}
+                      canEdit={canEdit}
+                      onToggle={() => toggleShortlist(listing)}
+                    />
                     <p className="text-lg font-medium text-pine-900">
                       {listingTitle(listing, boatMode)}
                     </p>

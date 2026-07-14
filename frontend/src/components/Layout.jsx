@@ -5,7 +5,7 @@ import { authAPI, searchesAPI } from '../api/api';
 import { searchPath } from '../hooks/useSearch';
 import { setLastSearchId } from '../pages/Searches';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/brand';
-import { assetTypeMeta, supportsRegions, supportsBoatMakes } from '../lib/assetTypes';
+import { assetTypeMeta, supportsRegions, supportsBoatMakes, supportsMarinas } from '../lib/assetTypes';
 import SearchSwitcher from './SearchSwitcher';
 
 const navItems = (searchId, assetType = 'home') => {
@@ -21,8 +21,13 @@ const navItems = (searchId, assetType = 'home') => {
     items.push({ to: searchPath(searchId, '/makes'), label: 'Makes' });
   }
 
+  if (supportsMarinas(assetType)) {
+    items.push({ to: searchPath(searchId, '/marinas'), label: 'Marinas' });
+  }
+
   items.push(
     { to: searchPath(searchId, '/listings'), label: 'Listings' },
+    { to: searchPath(searchId, '/compare'), label: 'Compare' },
     { to: searchPath(searchId, '/map'), label: 'Map' },
     { to: searchPath(searchId, '/estimator'), label: 'Estimator' },
     { to: searchPath(searchId, '/price-picker'), label: 'Price picker' },

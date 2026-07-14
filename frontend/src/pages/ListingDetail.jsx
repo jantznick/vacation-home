@@ -29,7 +29,9 @@ import { showError, showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, parseLineList } from '../lib/assetTypes';
 import { boatDisplayName, boatMakeModelLabel } from '../lib/boatTitle';
 import BoatModelSpecs, { boatModelHasSpecs } from '../components/BoatModelSpecs';
+import SistershipComps from '../components/SistershipComps';
 import CriteriaFitBadge from '../components/CriteriaFitBadge';
+import ShortlistStar from '../components/ShortlistStar';
 
 const STATUS_PILL = {
   active: 'bg-pine-100 text-pine-800',
@@ -731,6 +733,12 @@ export default function ListingDetail() {
                 onSave={(status) => applyListingUpdate({ status })}
               />
 
+              <ShortlistStar
+                active={listing.shortlisted}
+                canEdit={canEdit}
+                onToggle={(shortlisted) => applyListingUpdate({ shortlisted })}
+              />
+
               <InterestDots
                 value={listing.interestLevel}
                 canEdit={canEdit}
@@ -1030,6 +1038,16 @@ export default function ListingDetail() {
                 compact
               />
             </section>
+          )}
+
+          {boatMode && listing.boatModelId && (
+            <SistershipComps
+              listing={listing}
+              searchId={searchId}
+              api={api}
+              canEdit={canEdit}
+              onListingUpdate={applyListingUpdate}
+            />
           )}
 
           <Card className="!p-0 overflow-hidden">

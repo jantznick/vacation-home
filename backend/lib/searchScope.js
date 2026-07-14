@@ -29,6 +29,12 @@ export async function getLakeInSearch(searchId, lakeId) {
   return lake;
 }
 
+export async function getMarinaInSearch(searchId, marinaId) {
+  return prisma.marina.findFirst({
+    where: { id: marinaId, searchId },
+  });
+}
+
 export async function getBoatMakeInSearch(searchId, makeId) {
   return prisma.boatMake.findFirst({
     where: { id: makeId, searchId },

@@ -60,6 +60,9 @@ const listingInclude = {
 function buildListingWhere(searchId, query) {
   const where = { searchId };
 
+  if (query.ids) {
+    where.id = { in: query.ids.split(',').map((s) => s.trim()).filter(Boolean) };
+  }
   if (query.regionId) {
     where.regionId = query.regionId;
   }
@@ -74,6 +77,12 @@ function buildListingWhere(searchId, query) {
   }
   if (query.propulsion) {
     where.propulsion = query.propulsion;
+  }
+  if (query.shortlisted === 'true') {
+    where.shortlisted = true;
+  }
+  if (query.boatModelId) {
+    where.boatModelId = query.boatModelId;
   }
 
   if (query.needsRefresh === 'true') {

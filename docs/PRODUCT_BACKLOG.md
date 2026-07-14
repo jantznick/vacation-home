@@ -9,6 +9,8 @@ Suggestions for making boat and vacation-home decisions easier. Prioritized for 
 - Makes/models with cascading notes and structured encyclopedia specs
 - Metric helper tips (hover / mobile sheet)
 - Listing detail click-to-edit, nicknames, freshness refresh
+- Shortlist / comparison board with sistership comps
+- Marinas (boat equivalent of Regions) with carrying costs and seasonality
 
 ## Priority next
 
@@ -26,9 +28,19 @@ When a YachtWorld listing is linked to a `BoatModel` with Sailboatdata specs, co
 - Page source for a boat that already has Sailboatdata on the model (e.g. First 36.7)
 - One deep-keel and one shallow-keel listing of the same model, if you have them
 
-### 2. Shortlist / decision board
+### 2. Shortlist / decision board (shipped v1)
 
 Side-by-side 3–5 boats or homes: price, $/ft or $/acre, year, draft (boats), interest, open cons, last refreshed. Optimize for choose, not just browse.
+
+**Status**
+- `Listing.shortlisted` Boolean + `shortlistRank` for ordering
+- Star toggle on listing cards and detail hero
+- Comparison board at `/compare` — shows shortlisted listings as columns, attributes as rows
+- Board also accepts explicit `?ids=a,b,c` for ad-hoc comparisons (e.g. from sistership panel)
+- Boat-specific rows: $/ft, length, beam, draft, displacement, engine hours, fuel, water
+- Home-specific rows: $/acre, $/sqft, beds, baths, sqft, acres, waterfront, drive time
+- Pros/cons/notes, criteria fit badge, last refreshed, days on market
+- Nav link in main navigation
 
 ### 3. Survey / refit readiness checklist
 
@@ -48,14 +60,14 @@ Search-level constraints with a quiet “fits” score on listings.
 ## Boat-specific
 
 5. **Use-case profiles** — coastal weekender / Great Lakes / gunkhole / passagemaker; tint comfort, capsize, SA/D, draft for that lens.
-6. **Sistership comps** — narrative “vs other tracked First 36.7s” on top of length/year pricing.
+6. **Sistership comps** (shipped v1) — “vs other tracked [Model]s” panel on listing detail; compact table + “Compare all N” button linking to comparison board filtered by model.
 7. **Known-issues digest** — curated, editable model block (not scraped forum spam).
 8. **Sea trial / visit log** — structured wind, who went, feel, follow-ups.
 
 ## Home-specific
 
-9. **Carrying cost / seasonality** — HOA, insurance ballpark, winter access, well/septic flags.
-10. **“Can we use it?”** — drive time + calendar / access reality, not just map pins.
+9. **Carrying cost / seasonality** — HOA, insurance ballpark, winter access, well/septic flags. Boat carrying costs now live on the Marina entity (slip fees, winter storage, maintenance, season). Home-side Region carrying costs deferred.
+10. **“Can we use it?”** — drive time + calendar / access reality, not just map pins. Marina seasonality (seasonOpen/seasonClose/yearRound) is a first step; drive-time surfacing on comparison board is next.
 
 ## Collaboration
 

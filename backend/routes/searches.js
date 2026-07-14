@@ -7,6 +7,7 @@ import { sendInviteEmail } from '../services/email/resend.js';
 import { isAssetType, normalizeAssetType, supportsRegions, isBoatSearch } from '../lib/assetTypes.js';
 import regionRoutes from './regions.js';
 import lakeRoutes from './lakes.js';
+import marinaRoutes from './marinas.js';
 import boatMakeRoutes from './boatMakes.js';
 import boatModelRoutes from './boatModels.js';
 import listingRoutes from './listings.js';
@@ -602,6 +603,7 @@ scopedRouter.delete('/members/:userId', requireOwner, async (req, res) => {
 scopedRouter.use('/pois', poiRoutes);
 scopedRouter.use('/regions', requireHomeAssetType, requireEditorUnlessRead, regionRoutes);
 scopedRouter.use('/lakes', requireHomeAssetType, requireEditorUnlessRead, lakeRoutes);
+scopedRouter.use('/marinas', requireBoatAssetType, requireEditorUnlessRead, marinaRoutes);
 scopedRouter.use('/boat-makes', requireBoatAssetType, requireEditorUnlessRead, boatMakeRoutes);
 scopedRouter.use('/boat-models', requireBoatAssetType, requireEditorUnlessRead, boatModelRoutes);
 scopedRouter.use('/listings', requireEditorUnlessRead, listingRoutes);

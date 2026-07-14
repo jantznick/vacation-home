@@ -17,6 +17,7 @@ export const ASSET_TYPES = {
     supportsRegions: false,
     supportsLakes: false,
     supportsBoatMakes: true,
+    supportsMarinas: true,
   },
   rv: {
     key: 'rv',
@@ -26,6 +27,7 @@ export const ASSET_TYPES = {
     supportsRegions: false,
     supportsLakes: false,
     supportsBoatMakes: false,
+    supportsMarinas: false,
   },
 };
 
@@ -52,6 +54,11 @@ export function supportsRegions(assetType) {
 export function supportsBoatMakes(assetType) {
   if (!assetType) return false;
   return Boolean(assetTypeMeta(assetType).supportsBoatMakes);
+}
+
+export function supportsMarinas(assetType) {
+  if (!assetType) return false;
+  return Boolean(assetTypeMeta(assetType).supportsMarinas);
 }
 
 export function isBoatSearch(assetType) {
