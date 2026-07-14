@@ -7,6 +7,7 @@ import InlineEditable from '../components/InlineEditable';
 import EditableLineList from '../components/EditableLineList';
 import SailboatDataImport, { mergeSailboatDataIntoModel } from '../components/SailboatDataImport';
 import BoatModelSpecs, { boatModelHasSpecs } from '../components/BoatModelSpecs';
+import InfoTooltip from '../components/InfoTooltip';
 import useSearchAccess from '../hooks/useSearchAccess';
 import { formatCurrency, statusLabel, LISTING_STATUSES } from '../lib/format';
 import { formatBoatTitle } from '../lib/boatTitle';
@@ -272,8 +273,11 @@ export default function BoatModelDetail() {
         {highlights.length > 0 && (
           <div className="mt-5 grid grid-cols-2 gap-3 border-t border-pine-200/80 pt-5 sm:grid-cols-4">
             {highlights.map((item) => (
-              <div key={item.label}>
-                <p className="text-xs text-pine-500">{item.label}</p>
+              <div key={item.id || item.label}>
+                <p className="inline-flex items-center text-xs text-pine-500">
+                  <span>{item.label}</span>
+                  {item.tip && <InfoTooltip tip={item.tip} label={item.label} />}
+                </p>
                 <p className="mt-0.5 text-lg font-semibold tabular-nums tracking-tight text-pine-950 sm:text-xl">
                   {item.value}
                 </p>

@@ -4,6 +4,16 @@ import {
   buildBoatModelSpecSections,
   boatModelHasSpecs,
 } from '../lib/boatModelSpecs';
+import InfoTooltip from './InfoTooltip';
+
+function SpecLabel({ label, tip }) {
+  return (
+    <span className="inline-flex items-center">
+      <span>{label}</span>
+      {tip && <InfoTooltip tip={tip} label={label} />}
+    </span>
+  );
+}
 
 /**
  * Readable encyclopedia specs — highlights + grouped rows.
@@ -67,8 +77,10 @@ export default function BoatModelSpecs({
           }`}
         >
           {highlights.map((item) => (
-            <div key={item.label} className="min-w-0">
-              <p className="text-xs text-pine-500">{item.label}</p>
+            <div key={item.id || item.label} className="min-w-0">
+              <p className="text-xs text-pine-500">
+                <SpecLabel label={item.label} tip={item.tip} />
+              </p>
               <p
                 className={`mt-0.5 font-semibold tabular-nums tracking-tight text-pine-950 ${
                   compact ? 'text-base' : 'text-lg sm:text-xl'
@@ -94,10 +106,12 @@ export default function BoatModelSpecs({
             <dl>
               {section.rows.map((item) => (
                 <div
-                  key={item.label}
+                  key={item.id || item.label}
                   className="flex items-baseline justify-between gap-4 border-b border-pine-100 py-2 last:border-0"
                 >
-                  <dt className="shrink-0 text-sm text-pine-600">{item.label}</dt>
+                  <dt className="min-w-0 shrink text-sm text-pine-600">
+                    <SpecLabel label={item.label} tip={item.tip} />
+                  </dt>
                   <dd className="text-right text-sm font-medium tabular-nums text-pine-950">
                     {item.value}
                   </dd>

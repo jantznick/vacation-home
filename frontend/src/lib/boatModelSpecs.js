@@ -2,6 +2,8 @@
  * Shared boat-model encyclopedia specs for display (model + listing detail).
  */
 
+import { tipForSpec } from './boatSpecGuides.js';
+
 function fmtNum(value, digits = 1) {
   if (value == null || Number.isNaN(Number(value))) return null;
   const n = Number(value);
@@ -69,19 +71,19 @@ function constructionLabel(value) {
   return value;
 }
 
-function row(label, value) {
+function row(id, label, value) {
   if (value == null || value === '') return null;
-  return { label, value };
+  return { id, label, value, tip: tipForSpec(id) };
 }
 
 /** Key numbers shown large at the top of a specs panel. */
 export function buildBoatModelHighlights(model) {
   if (!model) return [];
   return [
-    row('Length', fmtFt(model.loaFt)),
-    row('Beam', fmtFt(model.beamFt)),
-    row('Draft', fmtFt(model.draftFt)),
-    row('Sail area', fmtSqFt(model.sailAreaSqFt)),
+    row('length', 'Length', fmtFt(model.loaFt)),
+    row('beam', 'Beam', fmtFt(model.beamFt)),
+    row('draft', 'Draft', fmtFt(model.draftFt)),
+    row('sailArea', 'Sail area', fmtSqFt(model.sailAreaSqFt)),
   ].filter(Boolean);
 }
 
@@ -97,48 +99,48 @@ export function buildBoatModelSpecSections(model) {
     {
       title: 'Size',
       rows: [
-        row('Length overall', fmtFt(model.loaFt)),
-        row('Waterline', fmtFt(model.lwlFt)),
-        row('Beam', fmtFt(model.beamFt)),
-        row('Draft', fmtFt(model.draftFt)),
+        row('length', 'Length overall', fmtFt(model.loaFt)),
+        row('waterline', 'Waterline', fmtFt(model.lwlFt)),
+        row('beam', 'Beam', fmtFt(model.beamFt)),
+        row('draft', 'Draft', fmtFt(model.draftFt)),
       ].filter(Boolean),
     },
     {
       title: 'Weight & sail',
       rows: [
-        row('Displacement', fmtLb(model.displacementLb)),
-        row('Ballast', ballast),
-        row('Sail area', fmtSqFt(model.sailAreaSqFt)),
+        row('displacement', 'Displacement', fmtLb(model.displacementLb)),
+        row('ballast', 'Ballast', ballast),
+        row('sailArea', 'Sail area', fmtSqFt(model.sailAreaSqFt)),
       ].filter(Boolean),
     },
     {
       title: 'How she sails',
       rows: [
-        row('Sail / displacement', fmtRatio(model.saDispl)),
-        row('Displacement / length', fmtRatio(model.dispLen)),
-        row('Comfort', fmtRatio(model.comfortRatio)),
-        row('Capsize', fmtRatio(model.capsizeRatio)),
-        row('Hull speed', fmtKn(model.hullSpeedKn)),
+        row('saDispl', 'Sail / displacement', fmtRatio(model.saDispl)),
+        row('dispLen', 'Displacement / length', fmtRatio(model.dispLen)),
+        row('comfort', 'Comfort', fmtRatio(model.comfortRatio)),
+        row('capsize', 'Capsize', fmtRatio(model.capsizeRatio)),
+        row('hullSpeed', 'Hull speed', fmtKn(model.hullSpeedKn)),
       ].filter(Boolean),
     },
     {
       title: 'Design',
       rows: [
-        row('Hull', model.hullType),
-        row('Rig', model.rigType),
-        row('Designer', model.designer),
-        row('Builder', model.builder),
-        row('Construction', constructionLabel(model.construction)),
-        row('Built', builtRange(model)),
-        row('Number built', model.builtCount != null ? fmtNum(model.builtCount, 0) : null),
+        row('hull', 'Hull', model.hullType),
+        row('rig', 'Rig', model.rigType),
+        row('designer', 'Designer', model.designer),
+        row('builder', 'Builder', model.builder),
+        row('construction', 'Construction', constructionLabel(model.construction)),
+        row('built', 'Built', builtRange(model)),
+        row('builtCount', 'Number built', model.builtCount != null ? fmtNum(model.builtCount, 0) : null),
       ].filter(Boolean),
     },
     {
       title: 'Engine & tanks',
       rows: [
-        row('Engine', engineLine(model)),
-        row('Fuel', fmtGal(model.fuelGal)),
-        row('Water', fmtGal(model.waterGal)),
+        row('engine', 'Engine', engineLine(model)),
+        row('fuel', 'Fuel', fmtGal(model.fuelGal)),
+        row('water', 'Water', fmtGal(model.waterGal)),
       ].filter(Boolean),
     },
   ];
