@@ -40,8 +40,11 @@ const BOAT_FIELDS = [
   ] },
 ];
 
+const FREETEXT_FIELD = { field: '_freetext', label: 'Other (manual check)', type: 'freetext', ops: ['eq'] };
+
 export function criteriaFieldsForAssetType(assetType) {
-  return assetType === 'boat' ? BOAT_FIELDS : HOME_FIELDS;
+  const base = assetType === 'boat' ? BOAT_FIELDS : HOME_FIELDS;
+  return [...base, FREETEXT_FIELD];
 }
 
 export function fieldDef(assetType, field) {
@@ -55,14 +58,17 @@ function newId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function createEmptyCriterion(assetType) {
+export function createEmptyCriterion(assetType, fieldOverride) {
   const fields = criteriaFieldsForAssetType(assetType);
-  const first = fields[0];
+  const target = fieldOverride
+    ? fields.find((f) => f.field === fieldOverride) || fields[0]
+    : fields[0];
   return {
     id: newId(),
-    field: first.field,
-    op: first.ops[0],
-    value: first.type === 'boolean' ? true : '',
+    field: target.field,
+    op: target.ops[0],
+    value: target.type === 'boolean' || target.type === 'freetext' ? true : '',
+    ...(target.type === 'freetext' ? { label: '' } : {}),
   };
 }
 
@@ -94,6 +100,19 @@ export function normalizeCriteriaList(raw, assetType) {
       const def = fieldDef(assetType, field);
       const op = String(item.op || '').trim();
       if (!def.ops.includes(op)) return null;
+
+      if (field === '_freetext') {
+        const label = typeof item.label === 'string' ? item.label.trim() : '';
+        if (!label) return null;
+        return {
+          id: typeof item.id === 'string' && item.id ? item.id : newId(),
+          field,
+          op,
+          value: true,
+          label,
+        };
+      }
+
       const value = normalizeValue(def, item.value);
       if (value == null) return null;
       return {
@@ -168,6 +187,21 @@ export function criterionLabel(criterion, assetType) {
 }
 
 function evaluateOne(criterion, listing, assetType) {
+  if (criterion.field === '_freetext') {
+    const overrides = listing?.criteriaOverrides;
+    const override = overrides && typeof overrides === 'object' ? overrides[criterion.id] : undefined;
+    return {
+      id: criterion.id,
+      field: criterion.field,
+      label: criterion.label || 'Custom',
+      met: override === true,
+      unknown: override == null,
+      listingValue: override === true ? 'yes' : override === false ? 'no' : '—',
+      expected: 'yes',
+      freetext: true,
+    };
+  }
+
   const def = fieldDef(assetType, criterion.field);
   const listingValue = readListingValue(listing, criterion.field);
   const hasValue = listingValue != null && listingValue !== '';

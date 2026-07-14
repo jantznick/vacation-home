@@ -101,9 +101,13 @@ model Search {
   /// Category-level tradeoffs (newline-separated list items).
   cons        String?
   /// Structured must-have rules (JSON array of { id, field, op, value }).
-  mustHaves   Json?     @db.JsonB
+  mustHaves      Json?     @db.JsonB
+  /// Free-text must-have notes (things that can't be auto-evaluated).
+  mustHaveNotes  String?
   /// Structured nice-to-have rules (JSON array of { id, field, op, value }).
-  niceToHaves Json?     @db.JsonB
+  niceToHaves    Json?     @db.JsonB
+  /// Free-text nice-to-have notes (things that can't be auto-evaluated).
+  niceToHaveNotes String?
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -408,6 +412,8 @@ model Listing {
   preferredSlipIndex Int?
   /// Custom cost line items — JSON array of { name, annualCost }.
   additionalCosts    Json?           @db.JsonB
+  /// Manual overrides for freetext criteria: { criterionId: true/false }.
+  criteriaOverrides  Json?           @db.JsonB
   visited            Boolean         @default(false)
   visitNotes         String?
   listingDate        DateTime?

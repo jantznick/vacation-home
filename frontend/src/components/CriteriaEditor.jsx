@@ -42,6 +42,14 @@ export default function CriteriaEditor({
     onChange([...value, createEmptyCriterion(assetType)]);
   };
 
+  const addFreetext = () => {
+    onChange([...value, createEmptyCriterion(assetType, '_freetext')]);
+  };
+
+  const structuredFields = fields.filter((f) => f.field !== '_freetext');
+  const structuredRows = value.filter((r) => r.field !== '_freetext');
+  const freetextRows = value.filter((r) => r.field === '_freetext');
+
   return (
     <div className="space-y-3">
       <div>
@@ -51,12 +59,12 @@ export default function CriteriaEditor({
         )}
       </div>
 
-      {value.length === 0 ? (
+      {structuredRows.length === 0 && freetextRows.length === 0 ? (
         <p className="text-sm text-pine-500">None yet.</p>
       ) : (
         <ul className="space-y-3">
-          {value.map((row) => {
-            const def = fieldDef(assetType, row.field) || fields[0];
+          {structuredRows.map((row) => {
+            const def = fieldDef(assetType, row.field) || structuredFields[0];
             const ops = CRITERIA_OPS.filter((op) => def.ops.includes(op.value));
             return (
               <li
@@ -71,7 +79,7 @@ export default function CriteriaEditor({
                     onChange={(e) => updateRow(row.id, { field: e.target.value })}
                     className="mt-1 w-full rounded-md border border-pine-300 bg-white px-2 py-1.5 text-sm text-pine-900"
                   >
-                    {fields.map((field) => (
+                    {structuredFields.map((field) => (
                       <option key={field.field} value={field.field}>{field.label}</option>
                     ))}
                   </select>
@@ -140,13 +148,43 @@ export default function CriteriaEditor({
               </li>
             );
           })}
+
+          {freetextRows.map((row) => (
+            <li
+              key={row.id}
+              className="flex items-center gap-2 rounded-xl border border-dashed border-pine-300 bg-pine-50/40 p-3"
+            >
+              <span className="shrink-0 text-xs text-pine-500">Manual:</span>
+              <input
+                value={row.label || ''}
+                disabled={disabled}
+                onChange={(e) => updateRow(row.id, { label: e.target.value })}
+                className="flex-1 rounded-md border border-pine-300 bg-white px-2 py-1.5 text-sm text-pine-900"
+                placeholder="e.g. Swim platform, Protected anchorage"
+              />
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removeRow(row.id)}
+                  className="shrink-0 rounded-md px-2 py-1.5 text-sm text-rose-700 hover:bg-rose-50"
+                >
+                  Remove
+                </button>
+              )}
+            </li>
+          ))}
         </ul>
       )}
 
       {!disabled && (
-        <Button type="button" variant="secondary" onClick={addRow}>
-          Add rule
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" onClick={addRow}>
+            Add rule
+          </Button>
+          <Button type="button" variant="secondary" onClick={addFreetext}>
+            Add manual check
+          </Button>
+        </div>
       )}
     </div>
   );

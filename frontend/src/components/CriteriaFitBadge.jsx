@@ -66,14 +66,16 @@ function buildTipBody(fit) {
   if (fit.must.total > 0) {
     lines.push('Must-haves');
     fit.must.items.forEach((item) => {
-      lines.push(`${item.met ? '✓' : '✗'} ${item.label} · listing ${item.listingValue}`);
+      const icon = item.unknown ? '○' : item.met ? '✓' : '✗';
+      lines.push(`${icon} ${item.label}${item.freetext ? '' : ` · listing ${item.listingValue}`}`);
     });
   }
   if (fit.nice.total > 0) {
     if (lines.length) lines.push('');
     lines.push('Nice-to-haves');
     fit.nice.items.forEach((item) => {
-      lines.push(`${item.met ? '✓' : '✗'} ${item.label} · listing ${item.listingValue}`);
+      const icon = item.unknown ? '○' : item.met ? '✓' : '✗';
+      lines.push(`${icon} ${item.label}${item.freetext ? '' : ` · listing ${item.listingValue}`}`);
     });
   }
   return lines.join('\n');

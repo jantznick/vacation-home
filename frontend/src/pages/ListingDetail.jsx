@@ -32,6 +32,7 @@ import BoatModelSpecs, { boatModelHasSpecs } from '../components/BoatModelSpecs'
 import SistershipComps from '../components/SistershipComps';
 import CriteriaFitBadge from '../components/CriteriaFitBadge';
 import ShortlistStar from '../components/ShortlistStar';
+import { normalizeCriteriaList } from '../lib/searchCriteria';
 
 const STATUS_PILL = {
   active: 'bg-pine-100 text-pine-800',
@@ -44,6 +45,70 @@ const STATUS_PILL = {
 
 function propulsionLabel(value) {
   return BOAT_PROPULSIONS.find((option) => option.value === value)?.label || value;
+}
+
+function FreetextCriteriaChecklist({ listing, search, canEdit, onUpdate }) {
+  const assetType = search?.assetType || 'home';
+  const allMust = normalizeCriteriaList(search?.mustHaves, assetType);
+  const allNice = normalizeCriteriaList(search?.niceToHaves, assetType);
+  const mustFreetext = allMust.filter((c) => c.field === '_freetext');
+  const niceFreetext = allNice.filter((c) => c.field === '_freetext');
+
+  if (mustFreetext.length === 0 && niceFreetext.length === 0) return null;
+
+  const overrides = listing.criteriaOverrides && typeof listing.criteriaOverrides === 'object'
+    ? listing.criteriaOverrides
+    : {};
+
+  const toggle = (criterionId) => {
+    const current = overrides[criterionId];
+    const next = current === true ? false : current === false ? null : true;
+    const updated = { ...overrides };
+    if (next == null) {
+      delete updated[criterionId];
+    } else {
+      updated[criterionId] = next;
+    }
+    onUpdate({ criteriaOverrides: Object.keys(updated).length > 0 ? updated : null });
+  };
+
+  const renderItem = (criterion) => {
+    const val = overrides[criterion.id];
+    const icon = val === true ? '✓' : val === false ? '✗' : '○';
+    const color = val === true ? 'text-emerald-600' : val === false ? 'text-rose-500' : 'text-pine-300';
+    return (
+      <button
+        key={criterion.id}
+        type="button"
+        disabled={!canEdit}
+        onClick={() => toggle(criterion.id)}
+        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-pine-50 disabled:opacity-60"
+      >
+        <span className={`shrink-0 text-base font-medium ${color}`}>{icon}</span>
+        <span className="text-pine-800">{criterion.label}</span>
+        {canEdit && <span className="ml-auto text-[10px] text-pine-400">tap to toggle</span>}
+      </button>
+    );
+  };
+
+  return (
+    <section className="mt-4 rounded-xl border border-pine-200 bg-white p-4 shadow-sm">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-pine-500">Manual checks</h3>
+      {mustFreetext.length > 0 && (
+        <div className="mb-2">
+          <p className="mb-1 text-xs font-medium text-pine-600">Must-haves</p>
+          <div className="space-y-0.5">{mustFreetext.map(renderItem)}</div>
+        </div>
+      )}
+      {niceFreetext.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs font-medium text-pine-600">Nice-to-haves</p>
+          <div className="space-y-0.5">{niceFreetext.map(renderItem)}</div>
+        </div>
+      )}
+      {canEdit && <p className="mt-2 text-[10px] text-pine-400">Tap each item to cycle: unchecked → yes → no</p>}
+    </section>
+  );
 }
 
 function parseOptionalNumber(raw) {
@@ -1538,6 +1603,13 @@ export default function ListingDetail() {
           </p>
         )}
       </section>
+
+      <FreetextCriteriaChecklist
+        listing={listing}
+        search={search}
+        canEdit={canEdit}
+        onUpdate={applyListingUpdate}
+      />
 
       {(listing.photoUrls?.length > 0 || priceEstimate) && (
         <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-5">
