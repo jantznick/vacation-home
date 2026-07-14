@@ -11,6 +11,7 @@ import PhotoGallery from '../components/PhotoGallery';
 import PriceEstimate from '../components/PriceEstimate';
 import LocationDriveTime from '../components/LocationDriveTime';
 import RouteMap from '../components/RouteMap';
+import MapPanel, { buildListingMarker } from '../components/MapPanel';
 import InlineEditable, { FeaturePill } from '../components/InlineEditable';
 import EditableLineList from '../components/EditableLineList';
 import usePrimaryPoi from '../hooks/usePrimaryPoi';
@@ -743,6 +744,26 @@ export default function ListingDetail() {
 
               {listing.canRefresh && <ListingStaleBadge listing={listing} />}
             </div>
+
+            {boatMode && (listing.sourceUrl || listing.mlsNumber) && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {listing.sourceUrl && (
+                  <a
+                    href={listing.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-full border border-pine-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-pine-800 shadow-sm hover:border-pine-400"
+                  >
+                    Open on YachtWorld ↗
+                  </a>
+                )}
+                {listing.mlsNumber && (
+                  <span className="inline-flex rounded-full border border-pine-200/80 bg-white/60 px-3 py-1.5 text-sm tabular-nums text-pine-600">
+                    YW {listing.mlsNumber}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="shrink-0 text-left lg:text-right">
@@ -781,6 +802,35 @@ export default function ListingDetail() {
               </p>
             )}
           </div>
+
+          {boatMode && listing.latitude != null && listing.longitude != null && (
+            <div className="w-full shrink-0 sm:w-40 lg:w-44">
+              <MapPanel
+                key={`glimpse-${listing.id}-${listing.latitude}-${listing.longitude}`}
+                markers={[buildListingMarker(listing, searchId)].filter(Boolean)}
+                height={120}
+                singleZoom={6}
+                initialZoom={6}
+                className="!rounded-xl"
+              />
+              {placeLine && (
+                <p className="mt-1.5 text-xs text-pine-500">{placeLine}</p>
+              )}
+            </div>
+          )}
+
+          {boatMode && listing.latitude == null && canEdit && (listing.city || listing.address) && (
+            <div className="w-full shrink-0 sm:w-40 lg:w-44">
+              <button
+                type="button"
+                onClick={handleGeocodeListing}
+                disabled={geocoding}
+                className="flex h-[120px] w-full items-center justify-center rounded-xl border border-dashed border-pine-300 bg-white/70 px-3 text-center text-sm text-pine-600 hover:border-pine-400 hover:text-pine-900"
+              >
+                {geocoding ? 'Pinning…' : 'Pin on map'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Feature pills */}
@@ -954,11 +1004,11 @@ export default function ListingDetail() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-5">
-        <div className="space-y-6 lg:col-span-3">
+      <div className={`mt-6 grid gap-6 ${boatMode ? '' : 'lg:grid-cols-5'}`}>
+        <div className={`space-y-6 ${boatMode ? '' : 'lg:col-span-3'}`}>
           <PriceEstimate data={priceEstimate} />
 
-          {boatMode && boatModelHasSpecs(listing.boatModel) && (
+          {boatMode && (boatModelHasSpecs(listing.boatModel) || listing.modelCheck) && (
             <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
               <BoatModelSpecs
                 model={listing.boatModel}
@@ -968,6 +1018,7 @@ export default function ListingDetail() {
                     ? searchPath(searchId, `/makes/${listing.boatMakeId}/models/${listing.boatModelId}`)
                     : null
                 }
+                modelCheck={listing.modelCheck}
                 compact
               />
             </section>
@@ -985,17 +1036,15 @@ export default function ListingDetail() {
               }}
             />
 
-            {(listing.visitNotes || canEdit) && (
+            {!boatMode && (listing.visitNotes || canEdit) && (
               <div className="border-t border-pine-100 px-5 py-5">
-                <p className="mb-2 text-sm font-medium text-pine-800">
-                  {boatMode ? 'Inspection notes' : 'Visit notes'}
-                </p>
+                <p className="mb-2 text-sm font-medium text-pine-800">Visit notes</p>
                 <InlineEditable
                   value={listing.visitNotes}
                   canEdit={canEdit}
                   multiline
-                  placeholder={boatMode ? 'What you noticed aboard…' : 'What you noticed on site…'}
-                  ariaLabel={boatMode ? 'Inspection notes' : 'Visit notes'}
+                  placeholder="What you noticed on site…"
+                  ariaLabel="Visit notes"
                   displayClassName="block w-full whitespace-pre-wrap text-sm text-pine-700"
                   emptyClassName="block w-full text-sm text-pine-400"
                   className="w-full"
@@ -1015,7 +1064,7 @@ export default function ListingDetail() {
                         applyListingUpdate({ visited });
                       }}
                     />
-                    {boatMode ? 'Inspected in person' : 'Visited in person'}
+                    Visited in person
                   </label>
                 )}
               </div>
@@ -1027,19 +1076,19 @@ export default function ListingDetail() {
           )}
         </div>
 
+        {!boatMode && (
         <div className="space-y-6 lg:col-span-2">
-          {(!boatMode || listingAddressLine || listing.latitude != null || listing.city || listing.state || canEdit) && (
-            <Card className="h-fit">
+          <Card className="h-fit">
               <div className="mt-1">
                 <LocationDriveTime
-                  locationLabel={boatMode ? 'Where it sits' : 'Property'}
+                  locationLabel="Property"
                   addressLine={listingAddressLine || (canEdit ? 'Add city / address' : null)}
                   latitude={listing.latitude}
                   longitude={listing.longitude}
                   driveTimeMinutes={listing.driveTimeMinutes}
                   driveDistanceMiles={listing.driveDistanceMiles}
                   onGeocode={canEdit && listing.latitude == null ? handleGeocodeListing : undefined}
-                  onDriveTime={canEdit && !boatMode ? handleListingDriveTime : undefined}
+                  onDriveTime={canEdit ? handleListingDriveTime : undefined}
                   geocoding={geocoding}
                   calculating={calculatingDriveTime}
                   error={locationError}
@@ -1055,7 +1104,7 @@ export default function ListingDetail() {
                     destinationLabel={title}
                     destinationSublabel={listingAddressLine}
                     destinationHref={searchPath(searchId, `/listings/${listing.id}`)}
-                    isLoadingRoute={!boatMode}
+                    isLoadingRoute
                   />
                 </div>
               )}
@@ -1087,9 +1136,8 @@ export default function ListingDetail() {
                 </ul>
               )}
             </Card>
-          )}
 
-          {(listing.sourceUrl || listing.mlsNumber || listing.daysOnMarket != null) && (
+          {(listing.sourceUrl || listing.mlsNumber) && (
             <div className="flex flex-wrap gap-2">
               {listing.sourceUrl && (
                 <a
@@ -1103,7 +1151,7 @@ export default function ListingDetail() {
               )}
               {listing.mlsNumber && (
                 <span className="inline-flex rounded-full border border-pine-200 bg-white px-3 py-1.5 text-sm text-pine-600">
-                  {boatMode ? 'YW' : 'MLS'} {listing.mlsNumber}
+                  MLS {listing.mlsNumber}
                 </span>
               )}
             </div>
@@ -1111,7 +1159,49 @@ export default function ListingDetail() {
 
           <Comments targetType="listing" targetId={listing.id} />
         </div>
+        )}
       </div>
+
+      {boatMode && (
+        <section className="mt-6 rounded-2xl border border-pine-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-medium text-pine-800">Inspection notes</p>
+              <InlineEditable
+                value={listing.visitNotes}
+                canEdit={canEdit}
+                multiline
+                placeholder="What you noticed aboard…"
+                ariaLabel="Inspection notes"
+                displayClassName="block w-full whitespace-pre-wrap text-sm text-pine-700"
+                emptyClassName="block w-full text-sm text-pine-400"
+                className="w-full"
+                onSave={(visitNotes) => {
+                  setListing((current) => ({ ...current, visitNotes }));
+                  return applyListingUpdate({ visitNotes });
+                }}
+              />
+              {canEdit && (
+                <label className="mt-3 flex items-center gap-2 text-sm text-pine-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(listing.visited)}
+                    onChange={(e) => {
+                      const visited = e.target.checked;
+                      setListing((current) => ({ ...current, visited }));
+                      applyListingUpdate({ visited });
+                    }}
+                  />
+                  Inspected in person
+                </label>
+              )}
+            </div>
+            <div>
+              <Comments targetType="listing" targetId={listing.id} />
+            </div>
+          </div>
+        </section>
+      )}
 
       {showDeleteConfirm && (
         <ConfirmModal

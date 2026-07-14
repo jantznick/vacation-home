@@ -41,6 +41,20 @@ const emptyForm = {
   model: '',
   nickname: '',
   lengthFt: '',
+  lwlFt: '',
+  beamFt: '',
+  draftFt: '',
+  draftMinFt: '',
+  displacementLb: '',
+  ballastLb: '',
+  engineMake: '',
+  engineModel: '',
+  engineHp: '',
+  engineHours: '',
+  fuelGal: '',
+  waterGal: '',
+  hullMaterial: '',
+  keelType: '',
   propulsion: 'sail',
   pros: '',
   cons: '',
@@ -149,6 +163,20 @@ export default function ListingForm() {
           model: listing.model || '',
           nickname: listing.nickname || '',
           lengthFt: listing.lengthFt ?? '',
+          lwlFt: listing.lwlFt ?? '',
+          beamFt: listing.beamFt ?? '',
+          draftFt: listing.draftFt ?? '',
+          draftMinFt: listing.draftMinFt ?? '',
+          displacementLb: listing.displacementLb ?? '',
+          ballastLb: listing.ballastLb ?? '',
+          engineMake: listing.engineMake || '',
+          engineModel: listing.engineModel || '',
+          engineHp: listing.engineHp ?? '',
+          engineHours: listing.engineHours ?? '',
+          fuelGal: listing.fuelGal ?? '',
+          waterGal: listing.waterGal ?? '',
+          hullMaterial: listing.hullMaterial || '',
+          keelType: listing.keelType || '',
           propulsion: listing.propulsion || 'sail',
           pros: listing.pros || '',
           cons: listing.cons || '',
@@ -196,6 +224,20 @@ export default function ListingForm() {
       make: fields.make ?? current.make,
       model: fields.model ?? current.model,
       lengthFt: fields.lengthFt ?? current.lengthFt,
+      lwlFt: fields.lwlFt ?? current.lwlFt,
+      beamFt: fields.beamFt ?? current.beamFt,
+      draftFt: fields.draftFt ?? current.draftFt,
+      draftMinFt: fields.draftMinFt ?? current.draftMinFt,
+      displacementLb: fields.displacementLb ?? current.displacementLb,
+      ballastLb: fields.ballastLb ?? current.ballastLb,
+      engineMake: fields.engineMake ?? current.engineMake,
+      engineModel: fields.engineModel ?? current.engineModel,
+      engineHp: fields.engineHp ?? current.engineHp,
+      engineHours: fields.engineHours ?? current.engineHours,
+      fuelGal: fields.fuelGal ?? current.fuelGal,
+      waterGal: fields.waterGal ?? current.waterGal,
+      hullMaterial: fields.hullMaterial ?? current.hullMaterial,
+      keelType: fields.keelType ?? current.keelType,
       propulsion: fields.propulsion || current.propulsion || 'sail',
       daysOnMarket: fields.daysOnMarket ?? current.daysOnMarket,
       photoUrls: fields.photoUrls ?? current.photoUrls,
@@ -212,7 +254,7 @@ export default function ListingForm() {
     return null;
   };
 
-  /** Edit-mode URL refresh: only price, plus photos if the scrape returns more. */
+  /** Edit-mode URL refresh: price, photos if more, and measured boat specs. */
   const applyRefreshFields = (fields) => {
     setForm((current) => {
       const currentPhotos = current.photoUrls ?? [];
@@ -223,6 +265,27 @@ export default function ListingForm() {
         ...current,
         listPrice: fields.listPrice ?? current.listPrice,
         photoUrls: shouldReplacePhotos ? scrapedPhotos : current.photoUrls,
+        yearBuilt: fields.yearBuilt ?? current.yearBuilt,
+        make: fields.make ?? current.make,
+        model: fields.model ?? current.model,
+        lengthFt: fields.lengthFt ?? current.lengthFt,
+        lwlFt: fields.lwlFt ?? current.lwlFt,
+        beamFt: fields.beamFt ?? current.beamFt,
+        draftFt: fields.draftFt ?? current.draftFt,
+        draftMinFt: fields.draftMinFt ?? current.draftMinFt,
+        displacementLb: fields.displacementLb ?? current.displacementLb,
+        ballastLb: fields.ballastLb ?? current.ballastLb,
+        engineMake: fields.engineMake ?? current.engineMake,
+        engineModel: fields.engineModel ?? current.engineModel,
+        engineHp: fields.engineHp ?? current.engineHp,
+        engineHours: fields.engineHours ?? current.engineHours,
+        fuelGal: fields.fuelGal ?? current.fuelGal,
+        waterGal: fields.waterGal ?? current.waterGal,
+        hullMaterial: fields.hullMaterial ?? current.hullMaterial,
+        keelType: fields.keelType ?? current.keelType,
+        propulsion: fields.propulsion || current.propulsion || 'sail',
+        city: fields.city ?? current.city,
+        state: fields.state ?? current.state,
       };
     });
     if (fields.rawScrapedData != null) {
@@ -358,6 +421,20 @@ export default function ListingForm() {
           model: form.model || null,
           nickname: form.nickname || null,
           lengthFt: form.lengthFt ? Number(form.lengthFt) : null,
+          lwlFt: form.lwlFt ? Number(form.lwlFt) : null,
+          beamFt: form.beamFt ? Number(form.beamFt) : null,
+          draftFt: form.draftFt ? Number(form.draftFt) : null,
+          draftMinFt: form.draftMinFt ? Number(form.draftMinFt) : null,
+          displacementLb: form.displacementLb ? Number(form.displacementLb) : null,
+          ballastLb: form.ballastLb ? Number(form.ballastLb) : null,
+          engineMake: form.engineMake || null,
+          engineModel: form.engineModel || null,
+          engineHp: form.engineHp ? Number(form.engineHp) : null,
+          engineHours: form.engineHours ? Number(form.engineHours) : null,
+          fuelGal: form.fuelGal ? Number(form.fuelGal) : null,
+          waterGal: form.waterGal ? Number(form.waterGal) : null,
+          hullMaterial: form.hullMaterial || null,
+          keelType: form.keelType || null,
           yearBuilt: form.yearBuilt ? Number(form.yearBuilt) : null,
           propulsion: form.propulsion || 'sail',
           pros: form.pros || null,
@@ -536,7 +613,7 @@ export default function ListingForm() {
         </Card>
       )}
 
-      <Card className="max-w-4xl">
+      <Card className="max-w-6xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -581,6 +658,59 @@ export default function ListingForm() {
                   </FormField>
                   <FormField label="Days on market" htmlFor="daysOnMarket">
                     <input id="daysOnMarket" name="daysOnMarket" type="number" value={form.daysOnMarket} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-medium text-pine-900">Measured specs</h2>
+                  <p className="mt-1 text-sm text-pine-600">
+                    Filled from YachtWorld when you import. Used to compare this boat against the model.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <FormField label="Waterline (ft)" htmlFor="lwlFt">
+                    <input id="lwlFt" name="lwlFt" type="number" step="0.1" value={form.lwlFt} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Beam (ft)" htmlFor="beamFt">
+                    <input id="beamFt" name="beamFt" type="number" step="0.1" value={form.beamFt} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Draft (ft)" htmlFor="draftFt">
+                    <input id="draftFt" name="draftFt" type="number" step="0.1" value={form.draftFt} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Board-up draft (ft)" htmlFor="draftMinFt">
+                    <input id="draftMinFt" name="draftMinFt" type="number" step="0.1" value={form.draftMinFt} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Displacement (lb)" htmlFor="displacementLb">
+                    <input id="displacementLb" name="displacementLb" type="number" value={form.displacementLb} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Ballast (lb)" htmlFor="ballastLb">
+                    <input id="ballastLb" name="ballastLb" type="number" value={form.ballastLb} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Engine make" htmlFor="engineMake">
+                    <input id="engineMake" name="engineMake" value={form.engineMake} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Engine model" htmlFor="engineModel">
+                    <input id="engineModel" name="engineModel" value={form.engineModel} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Engine HP" htmlFor="engineHp">
+                    <input id="engineHp" name="engineHp" type="number" step="0.1" value={form.engineHp} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Engine hours" htmlFor="engineHours">
+                    <input id="engineHours" name="engineHours" type="number" value={form.engineHours} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Fuel (gal)" htmlFor="fuelGal">
+                    <input id="fuelGal" name="fuelGal" type="number" step="0.1" value={form.fuelGal} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Water (gal)" htmlFor="waterGal">
+                    <input id="waterGal" name="waterGal" type="number" step="0.1" value={form.waterGal} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Hull material" htmlFor="hullMaterial">
+                    <input id="hullMaterial" name="hullMaterial" value={form.hullMaterial} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Keel type" htmlFor="keelType">
+                    <input id="keelType" name="keelType" value={form.keelType} onChange={handleChange} className={inputClass} />
                   </FormField>
                 </div>
               </section>

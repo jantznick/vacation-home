@@ -320,6 +320,22 @@ model Listing {
   waterfrontType     String?
   /// Boat length overall (feet).
   lengthFt           Float?
+  /// Listing dimensions / tanks from YachtWorld (for model cross-check).
+  lwlFt              Float?
+  beamFt             Float?
+  draftFt            Float?
+  /// Optional secondary draft (e.g. board up / drive-up).
+  draftMinFt         Float?
+  displacementLb     Float?
+  ballastLb          Float?
+  engineMake         String?
+  engineModel        String?
+  engineHp           Float?
+  engineHours        Float?
+  fuelGal            Float?
+  waterGal           Float?
+  hullMaterial       String?
+  keelType           String?
   make               String?
   model              String?
   /// Optional friendly name for this hull (shown after make/model).

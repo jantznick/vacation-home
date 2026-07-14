@@ -245,6 +245,94 @@ function extractLengthFt(node) {
   return metersToFeet(meters);
 }
 
+/** Prefer feet from `{ ft, m }` dimension objects. */
+function dimensionFeet(value) {
+  if (value == null) return null;
+  if (typeof value === 'object') {
+    const ft = numericValue(value.ft ?? value.feet);
+    if (ft != null) return ft;
+    return metersToFeet(value.m ?? value.meters);
+  }
+  return numericValue(value);
+}
+
+function weightPounds(value) {
+  if (value == null) return null;
+  if (typeof value === 'object') {
+    const lb = numericValue(value.lb ?? value.lbs ?? value.pounds);
+    if (lb != null) return lb;
+    const kg = numericValue(value.kg);
+    return kg == null ? null : Math.round(kg * 2.20462);
+  }
+  return numericValue(value);
+}
+
+function capacityGallons(tanks) {
+  if (!Array.isArray(tanks) || tanks.length === 0) return null;
+  let total = 0;
+  let found = false;
+  for (const tank of tanks) {
+    const qty = numericValue(tank?.quantity) || 1;
+    const gal = numericValue(
+      tank?.capacity?.gal
+        ?? tank?.capacity?.gallons
+        ?? tank?.capacity
+        ?? tank?.gal,
+    );
+    if (gal == null) continue;
+    found = true;
+    total += gal * qty;
+  }
+  return found ? Math.round(total * 10) / 10 : null;
+}
+
+function humanizeKeelType(raw) {
+  if (!raw) return null;
+  const text = String(raw).trim();
+  if (!text) return null;
+  const map = {
+    'kt-fin': 'Fin',
+    'kt-full': 'Full',
+    'kt-wing': 'Wing',
+    'kt-bulb': 'Bulb',
+    'kt-centerboard': 'Centerboard',
+    'kt-daggerboard': 'Daggerboard',
+    'kt-twin': 'Twin',
+    'kt-lifting': 'Lifting',
+  };
+  const key = text.toLowerCase();
+  if (map[key]) return map[key];
+  return text.replace(/^kt-/i, '').replace(/[-_]/g, ' ');
+}
+
+function extractBoatSpecs(boat = {}) {
+  const dims = boat.specifications?.dimensions ?? boat.dimensions ?? {};
+  const lengths = dims.lengths ?? {};
+  const weights = boat.specifications?.weights ?? boat.weights ?? {};
+  const tanks = boat.tanks ?? {};
+  const engines = boat.propulsion?.engines
+    ?? boat.engines
+    ?? (boat.engine ? [boat.engine] : []);
+  const primaryEngine = Array.isArray(engines) ? engines[0] : null;
+
+  return {
+    lwlFt: dimensionFeet(lengths.waterline),
+    beamFt: dimensionFeet(dims.beam),
+    draftFt: dimensionFeet(dims.maxDraft ?? dims.draft),
+    draftMinFt: dimensionFeet(dims.driveUpDraft ?? dims.minDraft),
+    displacementLb: weightPounds(weights.displacement),
+    ballastLb: weightPounds(weights.ballast),
+    engineMake: firstString(primaryEngine?.make, primaryEngine?.manufacturer),
+    engineModel: firstString(primaryEngine?.model),
+    engineHp: numericValue(primaryEngine?.power?.hp ?? primaryEngine?.hp),
+    engineHours: numericValue(primaryEngine?.hours),
+    fuelGal: capacityGallons(tanks.fuel),
+    waterGal: capacityGallons(tanks.freshWater ?? tanks.water),
+    hullMaterial: firstString(boat.hull?.material, boat.hullMaterial),
+    keelType: humanizeKeelType(firstString(boat.hull?.keelType, boat.keelType)),
+  };
+}
+
 function extractPhotos(node) {
   const urls = [];
   const seen = new Set();
@@ -364,7 +452,7 @@ function extractLocation(boat) {
   };
 }
 
-function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
+export function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
   const location = extractLocation(boat || {});
   const make = firstString(boat?.make, boat?.manufacturer, boat?.brand?.name, boat?.brand);
   const yearBuilt = intValue(boat?.year ?? boat?.yearBuilt ?? boat?.boatYear);
@@ -374,6 +462,7 @@ function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
     || cleanBoatModel(firstString(boat?.name, boat?.boatName), make, yearBuilt);
   const listPrice = extractPrice(boat?.price ?? boat?.normPrice ?? boat?.offers);
   const lengthFt = extractLengthFt(boat);
+  const specs = extractBoatSpecs(boat || {});
   const photos = extractPhotos(boat);
   const id = firstString(
     boat?.id,
@@ -399,6 +488,7 @@ function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
     make,
     model,
     lengthFt,
+    ...specs,
     propulsion: inferPropulsion(boat),
     photoUrls: photos.length ? photos : null,
     rawScrapedData: {
@@ -407,6 +497,16 @@ function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
       boat,
     },
   };
+}
+
+/** Rehydrate listing fields from a saved YachtWorld raw payload (paste import). */
+export function listingFieldsFromYachtWorldRaw(rawScrapedData, sourceUrl = null) {
+  const boat = rawScrapedData?.boat;
+  if (!boat || typeof boat !== 'object') return null;
+  return mapBoatRecord(boat, {
+    sourceUrl: sourceUrl || null,
+    listingId: rawScrapedData?.listingId ?? null,
+  });
 }
 
 function extractNextData(html) {

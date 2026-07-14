@@ -49,7 +49,9 @@ Boat fields:
 
 `BoatMake` / `BoatModel` hold description, pros, cons, and notes that cascade onto boat detail pages.
 
-`BoatModel` also stores structured encyclopedia specs (LOA, beam, draft, displacement, sail area, ratios, designer, builder, engine, tankage, sailboatdata URL, etc.) for readable model pages and future YachtWorld listing cross-checks.
+`BoatModel` also stores structured encyclopedia specs (LOA, beam, draft, displacement, sail area, ratios, designer, builder, engine, tankage, sailboatdata URL, etc.) for readable model pages and YachtWorld listing cross-checks.
+
+Boat **listing** fields for cross-check (from YachtWorld when available): `beamFt`, `draftFt`, `lwlFt`, `displacementLb`, `ballastLb`, `engineMake` / `engineHp`, `fuelGal` / `waterGal`, `hullMaterial`, `keelType`, plus existing `lengthFt` / `yearBuilt` / make / model.
 
 `regionId` is **optional**. Required for home listings; null for boats.
 
@@ -77,12 +79,14 @@ Boat comps use length (± ~20%) and matching propulsion when present. `$/ft` is 
 
 ## Roadmap (later)
 
-1. More reliable YachtWorld fetch (when bot protection allows)
-2. Propulsion as pricing segment / one-hot feature when sample size allows
-3. Boat “regions” or marinas
+1. **Listing ↔ model check** — YachtWorld listing specs vs Sailboatdata model (in progress; see [PRODUCT_BACKLOG.md](./PRODUCT_BACKLOG.md))
+2. More reliable YachtWorld fetch (when bot protection allows)
+3. Propulsion as pricing segment / one-hot feature when sample size allows
 4. Boat “regions” or marinas
 5. RV asset type + fields
-6. Saas templates for default category pros/cons per type
+6. SaaS templates for default category pros/cons per type
+
+Product ideas beyond this list: [PRODUCT_BACKLOG.md](./PRODUCT_BACKLOG.md).
 
 ## Customer experience rules
 

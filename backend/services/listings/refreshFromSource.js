@@ -32,8 +32,11 @@ function photoCount(urls) {
 }
 
 /**
- * Refresh keeps existing listing details intact. Only list price is updated from
- * the source; photos are replaced only when the scrape returns strictly more.
+ * Refresh from source:
+ * - always updates list price + fetchedAt + raw scrape
+ * - replaces photos only when the scrape returns strictly more URLs
+ * - fills boat measured specs when present (for listing ↔ model checks)
+ * - does not overwrite notes, nickname, status, or other manual fields
  */
 export function buildRefreshUpdateData(existing, scrapedFields) {
   const scraped = scrapedFieldsToListingData(scrapedFields);
@@ -41,11 +44,39 @@ export function buildRefreshUpdateData(existing, scrapedFields) {
   const scrapedPhotos = scraped.photoUrls;
   const shouldReplacePhotos = photoCount(scrapedPhotos) > photoCount(existingPhotos);
 
+  const boatSpecKeys = [
+    'lengthFt',
+    'lwlFt',
+    'beamFt',
+    'draftFt',
+    'draftMinFt',
+    'displacementLb',
+    'ballastLb',
+    'engineMake',
+    'engineModel',
+    'engineHp',
+    'engineHours',
+    'fuelGal',
+    'waterGal',
+    'hullMaterial',
+    'keelType',
+    'yearBuilt',
+    'make',
+    'model',
+    'propulsion',
+  ];
+
+  const boatSpecs = {};
+  for (const key of boatSpecKeys) {
+    boatSpecs[key] = scraped[key] != null ? scraped[key] : existing[key];
+  }
+
   return {
     listPrice: scraped.listPrice ?? existing.listPrice,
     photoUrls: shouldReplacePhotos ? scrapedPhotos : existingPhotos,
     rawScrapedData: scraped.rawScrapedData ?? existing.rawScrapedData,
     fetchedAt: new Date(),
+    ...boatSpecs,
   };
 }
 

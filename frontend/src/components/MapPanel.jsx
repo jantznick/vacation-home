@@ -19,7 +19,7 @@ const MARKER_COLORS = {
   listing: '#ea580c',
 };
 
-function FitBounds({ markers, routePositions }) {
+function FitBounds({ markers, routePositions, singleZoom = 10, fitPadding = 48 }) {
   const map = useMap();
 
   useEffect(() => {
@@ -36,17 +36,17 @@ function FitBounds({ markers, routePositions }) {
       map.invalidateSize({ pan: false });
 
       if (points.length === 1) {
-        map.setView(points[0], 10);
+        map.setView(points[0], singleZoom);
         return;
       }
 
-      map.fitBounds(points, { padding: [48, 48] });
+      map.fitBounds(points, { padding: [fitPadding, fitPadding] });
     };
 
     // Defer until Leaflet has laid out the container (e.g. after map first mounts).
     const frame = requestAnimationFrame(sync);
     return () => cancelAnimationFrame(frame);
-  }, [map, markers, routePositions]);
+  }, [map, markers, routePositions, singleZoom, fitPadding]);
 
   return null;
 }
@@ -58,6 +58,9 @@ export default function MapPanel({
   height,
   className = '',
   emptyMessage = 'No locations to show on the map yet.',
+  singleZoom = 10,
+  fitPadding = 48,
+  initialZoom = 8,
 }) {
   const mapHeightClass = height ? '' : 'h-[min(50vh,520px)] min-h-[240px]';
   const mapStyle = height ? { height } : undefined;
@@ -88,7 +91,7 @@ export default function MapPanel({
     <div className={`relative isolate overflow-hidden rounded-lg border border-pine-200 ${mapHeightClass} ${className}`} style={mapStyle}>
       <MapContainer
         center={center}
-        zoom={8}
+        zoom={initialZoom}
         scrollWheelZoom={false}
         className="h-full w-full"
       >
@@ -97,7 +100,12 @@ export default function MapPanel({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <FitBounds markers={markers} routePositions={routePositions} />
+        <FitBounds
+          markers={markers}
+          routePositions={routePositions}
+          singleZoom={singleZoom}
+          fitPadding={fitPadding}
+        />
 
         {routePositions.length > 0 && (
           <Polyline

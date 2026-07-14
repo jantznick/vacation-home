@@ -25,6 +25,7 @@ import {
   computeListingPriceSignals,
 } from '../services/pricing/index.js';
 import { previewListingFromUrl } from '../services/ingest/index.js';
+import { listingFieldsFromYachtWorldRaw } from '../services/ingest/yachtworld.js';
 import { refreshListingFromSource } from '../services/listings/refreshFromSource.js';
 import { staleListingCutoff } from '../lib/listingFreshness.js';
 import {
@@ -105,12 +106,45 @@ async function validateRegionAndLake(searchId, regionId, lakeId) {
   return { region };
 }
 
+const BOAT_NUMERIC_SPEC_KEYS = [
+  'lengthFt',
+  'lwlFt',
+  'beamFt',
+  'draftFt',
+  'draftMinFt',
+  'displacementLb',
+  'ballastLb',
+  'engineHp',
+  'engineHours',
+  'fuelGal',
+  'waterGal',
+];
+
+const BOAT_STRING_SPEC_KEYS = [
+  'engineMake',
+  'engineModel',
+  'hullMaterial',
+  'keelType',
+];
+
 function boatFieldsFromBody(fields, { forCreate = false } = {}) {
   const data = {};
 
-  if (fields.lengthFt !== undefined || forCreate) {
-    data.lengthFt = parseOptionalNumber(fields.lengthFt);
+  for (const key of BOAT_NUMERIC_SPEC_KEYS) {
+    if (fields[key] !== undefined || forCreate) {
+      data[key] = parseOptionalNumber(fields[key]);
+    }
   }
+
+  for (const key of BOAT_STRING_SPEC_KEYS) {
+    if (fields[key] !== undefined || forCreate) {
+      const value = fields[key];
+      data[key] = typeof value === 'string'
+        ? (value.trim() || null)
+        : (value ?? null);
+    }
+  }
+
   if (fields.make !== undefined || forCreate) {
     data.make = fields.make?.trim?.() ? fields.make.trim() : (fields.make ?? null);
   }
@@ -129,6 +163,20 @@ function boatFieldsFromBody(fields, { forCreate = false } = {}) {
   }
 
   return data;
+}
+
+function mergeBoatSpecsFromScraped(target, scraped = {}) {
+  for (const key of [...BOAT_NUMERIC_SPEC_KEYS, ...BOAT_STRING_SPEC_KEYS]) {
+    if (scraped[key] != null && (target[key] == null || target[key] === '')) {
+      target[key] = scraped[key];
+    }
+  }
+  if (scraped.propulsion && !target.propulsion) {
+    target.propulsion = scraped.propulsion;
+  }
+  if (scraped.make && !target.make) target.make = scraped.make;
+  if (scraped.model && !target.model) target.model = scraped.model;
+  return target;
 }
 
 router.get('/', async (req, res) => {
@@ -373,6 +421,11 @@ router.post('/', async (req, res) => {
       const result = await previewListingFromUrl(fields.sourceUrl);
       scrapedData = scrapedFieldsToListingData(result.fields);
       warnings = result.warnings;
+    } else if (rawScrapedData?.boat) {
+      const fromRaw = listingFieldsFromYachtWorldRaw(rawScrapedData, fields.sourceUrl);
+      scrapedData = fromRaw
+        ? scrapedFieldsToListingData(fromRaw)
+        : { rawScrapedData, fetchedAt: new Date() };
     } else if (rawScrapedData) {
       scrapedData.rawScrapedData = rawScrapedData;
       scrapedData.fetchedAt = new Date();
@@ -380,23 +433,18 @@ router.post('/', async (req, res) => {
 
     const boatData = homeSearch
       ? {}
-      : {
-          lengthFt: fields.lengthFt != null && fields.lengthFt !== ''
-            ? parseOptionalNumber(fields.lengthFt)
-            : (scrapedData.lengthFt ?? null),
-          make: fields.make?.trim?.()
-            ? fields.make.trim()
-            : (scrapedData.make ?? null),
-          model: fields.model?.trim?.()
-            ? fields.model.trim()
-            : (scrapedData.model ?? null),
-          nickname: fields.nickname?.trim?.() ? fields.nickname.trim() : null,
-          propulsion: fields.propulsion
-            ? normalizePropulsion(fields.propulsion)
-            : (scrapedData.propulsion || 'sail'),
-        };
+      : boatFieldsFromBody(
+        {
+          ...scrapedData,
+          ...Object.fromEntries(
+            Object.entries(fields).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+          ),
+        },
+        { forCreate: true },
+      );
 
     if (!homeSearch) {
+      mergeBoatSpecsFromScraped(boatData, scrapedData);
       const linked = await ensureBoatMakeAndModel(
         prisma,
         searchId,
@@ -484,13 +532,18 @@ router.patch('/:id', async (req, res) => {
     const homeSearch = supportsRegions(assetType);
 
     // Strip boat keys from generic spread; apply explicitly below.
-    delete data.lengthFt;
-    delete data.make;
-    delete data.model;
-    delete data.nickname;
-    delete data.propulsion;
-    delete data.boatMakeId;
-    delete data.boatModelId;
+    for (const key of [
+      ...BOAT_NUMERIC_SPEC_KEYS,
+      ...BOAT_STRING_SPEC_KEYS,
+      'make',
+      'model',
+      'nickname',
+      'propulsion',
+      'boatMakeId',
+      'boatModelId',
+    ]) {
+      delete data[key];
+    }
 
     if (!homeSearch) {
       Object.assign(data, boatFieldsFromBody(fields));
@@ -535,6 +588,26 @@ router.patch('/:id', async (req, res) => {
 
     if (rawScrapedData !== undefined) {
       data.rawScrapedData = rawScrapedData;
+      if (!homeSearch && rawScrapedData?.boat) {
+        const fromRaw = listingFieldsFromYachtWorldRaw(
+          rawScrapedData,
+          fields.sourceUrl || existing.sourceUrl,
+        );
+        if (fromRaw) {
+          const mapped = scrapedFieldsToListingData(fromRaw);
+          mergeBoatSpecsFromScraped(data, mapped);
+          if (mapped.yearBuilt != null && fields.yearBuilt === undefined) {
+            data.yearBuilt = mapped.yearBuilt;
+          }
+          if (mapped.photoUrls != null && fields.photoUrls === undefined) {
+            data.photoUrls = mapped.photoUrls;
+          }
+          if (mapped.listPrice != null && fields.listPrice === undefined) {
+            data.listPrice = mapped.listPrice;
+          }
+          data.fetchedAt = new Date();
+        }
+      }
     }
 
     if (fields.latitude !== undefined) {

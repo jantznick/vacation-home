@@ -3,6 +3,10 @@ import {
   isSoldCompListing,
   trainingListPrice,
 } from './listingBrowse.js';
+import {
+  compareListingToBoatModel,
+  summarizeListingModelCheck,
+} from './listingModelCheck.js';
 
 /**
  * Serialize a listing for API responses with derived metrics.
@@ -18,6 +22,16 @@ export function serializeListing(listing) {
 
   const lengthFt = listing.lengthFt != null ? Number(listing.lengthFt) : null;
 
+  const modelCheck = listing.boatModel
+    ? (() => {
+      const comparison = compareListingToBoatModel(listing, listing.boatModel);
+      return {
+        ...comparison,
+        summary: summarizeListingModelCheck(comparison),
+      };
+    })()
+    : null;
+
   return {
     ...rest,
     listPrice,
@@ -29,6 +43,7 @@ export function serializeListing(listing) {
     pricePerAcre: compPrice && acres ? Math.round(compPrice / acres) : null,
     pricePerSqft: compPrice && sqftLiving ? Math.round(compPrice / sqftLiving) : null,
     pricePerFoot: compPrice && lengthFt ? Math.round(compPrice / lengthFt) : null,
+    modelCheck,
     ...freshness,
     canRefresh: freshness.canRefresh && !isSoldCompListing(listing),
   };
@@ -65,6 +80,20 @@ export function scrapedFieldsToListingData(scraped, { fetchedAt = new Date() } =
     waterfront: scraped.waterfront ?? false,
     waterfrontType: scraped.waterfrontType ?? null,
     lengthFt: scraped.lengthFt ?? null,
+    lwlFt: scraped.lwlFt ?? null,
+    beamFt: scraped.beamFt ?? null,
+    draftFt: scraped.draftFt ?? null,
+    draftMinFt: scraped.draftMinFt ?? null,
+    displacementLb: scraped.displacementLb ?? null,
+    ballastLb: scraped.ballastLb ?? null,
+    engineMake: scraped.engineMake ?? null,
+    engineModel: scraped.engineModel ?? null,
+    engineHp: scraped.engineHp ?? null,
+    engineHours: scraped.engineHours ?? null,
+    fuelGal: scraped.fuelGal ?? null,
+    waterGal: scraped.waterGal ?? null,
+    hullMaterial: scraped.hullMaterial ?? null,
+    keelType: scraped.keelType ?? null,
     make: scraped.make ?? null,
     model: scraped.model ?? null,
     propulsion: scraped.propulsion ?? null,

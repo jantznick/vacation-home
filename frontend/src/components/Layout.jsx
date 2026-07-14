@@ -97,7 +97,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-[1100] border-b border-pine-800 bg-pine-900 text-white">
-        <div className="mx-auto max-w-6xl px-4">
+        <div className="mx-auto max-w-[90rem] px-4">
           <div className="flex h-14 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <Link
@@ -202,7 +202,7 @@ export default function Layout({ children }) {
             id="mobile-nav"
             className="border-t border-pine-800 bg-pine-900 px-4 py-2 sm:hidden"
           >
-            <div className="mx-auto max-w-6xl space-y-1">
+            <div className="mx-auto max-w-[90rem] space-y-1">
               {items.map((item) => (
                 <NavLink
                   key={item.to}
@@ -231,7 +231,7 @@ export default function Layout({ children }) {
           </nav>
         )}
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-5 sm:py-8">{children}</main>
+      <main className="mx-auto max-w-[90rem] px-4 py-5 sm:py-8">{children}</main>
     </div>
   );
 }

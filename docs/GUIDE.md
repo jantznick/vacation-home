@@ -545,9 +545,12 @@ See **[SAAS_IMPLEMENTATION.md](./SAAS_IMPLEMENTATION.md)** for locked decisions 
 
 ### Next implementation (when you want it)
 
-1. **Side-by-side listing comparison** — pick 2–4 shortlisted listings; compare price, acres, drive time, lake, photos, and your notes in one view. Best payoff after you have 5–10 listings saved.
-2. **Zillow refresh UX** — dedicated “paste updated JSON” section on listing edit (same parser, clearer workflow than full form re-import).
-3. **Bulk drive time** — one button to recalculate all regions/listings after POI changes
+1. **Listing ↔ model check (boats)** — compare YachtWorld listing specs to Sailboatdata model expectations; see [PRODUCT_BACKLOG.md](./PRODUCT_BACKLOG.md).
+2. **Side-by-side listing comparison** — pick 2–4 shortlisted listings; compare price, acres/length, drive time, notes in one view.
+3. **Zillow refresh UX** — dedicated “paste updated JSON” section on listing edit (same parser, clearer workflow than full form re-import).
+4. **Bulk drive time** — one button to recalculate all regions/listings after POI changes
+
+Broader buying-experience ideas (must-haves, survey checklists, partner friction, etc.): **[PRODUCT_BACKLOG.md](./PRODUCT_BACKLOG.md)**.
 
 ### Deferred
 
