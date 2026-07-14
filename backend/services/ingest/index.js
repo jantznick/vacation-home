@@ -49,9 +49,13 @@ export function previewListingFromPaste({ sourceUrl, pastedData }) {
     throw new Error('Pasted page data is required');
   }
 
-  // YachtWorld page source embeds the listing URL — allow paste without typing it first.
+  // YachtWorld page-source import is HTML-only — never fetch, never require the URL field.
+  if (looksLikeYachtWorldPageSource(pastedData)) {
+    return parseYachtWorldFromPaste({ pastedData });
+  }
+
   if (!sourceUrl?.trim()) {
-    return parseYachtWorldFromPaste({ sourceUrl: null, pastedData });
+    throw new Error('Listing URL is required for this paste import');
   }
 
   const sourceSite = detectSourceSite(sourceUrl);
@@ -60,10 +64,14 @@ export function previewListingFromPaste({ sourceUrl, pastedData }) {
   }
 
   if (sourceSite === 'yachtworld') {
-    return parseYachtWorldFromPaste({ sourceUrl, pastedData });
+    return parseYachtWorldFromPaste({ pastedData });
   }
 
   return parseZillowFromPaste({ sourceUrl, pastedData });
+}
+
+function looksLikeYachtWorldPageSource(html) {
+  return /yachtworld\.com|__REDUX_STATE__|boatsgroup\.com/i.test(html);
 }
 
 export async function previewDnrLakeFromUrl(urlOrWbic) {

@@ -51,6 +51,7 @@ router.post('/preview-paste', async (req, res) => {
     }
 
     const result = previewListingFromPaste({
+      // YachtWorld paste ignores this; Zillow paste may still use it.
       sourceUrl: url?.trim() || null,
       pastedData,
     });

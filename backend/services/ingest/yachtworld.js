@@ -759,17 +759,19 @@ export function parseYachtWorldHtml(html, sourceUrl) {
   };
 }
 
-export function parseYachtWorldFromPaste({ sourceUrl, pastedData }) {
+export function parseYachtWorldFromPaste({ pastedData }) {
   if (!pastedData?.trim()) {
     throw new Error('Pasted page data is required');
   }
 
-  const resolvedUrl = sourceUrl?.trim()
-    || guessYachtWorldUrlFromHtml(pastedData);
+  const resolvedUrl = guessYachtWorldUrlFromHtml(pastedData);
   if (!resolvedUrl) {
-    throw new Error('Could not find a YachtWorld listing URL in the page source. Paste the listing URL or include full page source.');
+    throw new Error(
+      'Could not find a YachtWorld listing URL inside the pasted page source.',
+    );
   }
 
+  // Parse the pasted HTML only — never fetch the listing URL.
   const result = parseYachtWorldHtml(pastedData, resolvedUrl);
   const needsPaste = Boolean(
     !result.fields?.listPrice

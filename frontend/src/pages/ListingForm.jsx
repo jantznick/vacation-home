@@ -268,9 +268,9 @@ export default function ListingForm() {
     setFetchWarnings([]);
 
     try {
-      const data = await api.ingest.previewPaste(importUrl.trim() || null, pasteSource.trim());
+      // Page-source import is HTML-only. Do not send or update the URL field.
+      const data = await api.ingest.previewPaste(null, pasteSource.trim());
       const importWarning = applyPreviewFields(data.fields);
-      setImportUrl(data.fields.sourceUrl || importUrl);
       setFetchWarnings([
         ...(data.warnings || []),
         ...(importWarning ? [importWarning] : []),
@@ -458,7 +458,7 @@ export default function ListingForm() {
             <div className="mt-3 space-y-3">
               <p className="text-sm text-pine-600">
                 On the listing page, use View Page Source, copy everything, and paste it here.
-                The listing URL is filled in automatically when it&apos;s in the page source.
+                This only reads the pasted HTML — it does not fetch from YachtWorld.
               </p>
               <textarea
                 value={pasteSource}
