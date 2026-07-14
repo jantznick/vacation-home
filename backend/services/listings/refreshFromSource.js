@@ -12,47 +12,26 @@ const listingInclude = {
   lake: { select: { id: true, name: true } },
 };
 
-import { REFRESH_PROTECTED_STATUSES } from '../../lib/listingBrowse.js';
+function photoCount(urls) {
+  return Array.isArray(urls) ? urls.length : 0;
+}
 
+/**
+ * Refresh keeps existing listing details intact. Only list price is updated from
+ * the source; photos are replaced only when the scrape returns strictly more.
+ */
 export function buildRefreshUpdateData(existing, scrapedFields) {
   const scraped = scrapedFieldsToListingData(scrapedFields);
-  const data = {
-    sourceUrl: scraped.sourceUrl ?? existing.sourceUrl,
-    sourceSite: scraped.sourceSite ?? existing.sourceSite,
-    mlsNumber: scraped.mlsNumber ?? existing.mlsNumber,
-    address: scraped.address ?? existing.address,
-    city: scraped.city ?? existing.city,
-    state: scraped.state ?? existing.state,
-    zip: scraped.zip ?? existing.zip,
-    latitude: scraped.latitude ?? existing.latitude,
-    longitude: scraped.longitude ?? existing.longitude,
+  const existingPhotos = existing.photoUrls;
+  const scrapedPhotos = scraped.photoUrls;
+  const shouldReplacePhotos = photoCount(scrapedPhotos) > photoCount(existingPhotos);
+
+  return {
     listPrice: scraped.listPrice ?? existing.listPrice,
-    soldPrice: scraped.soldPrice ?? existing.soldPrice,
-    isVacantLot: scraped.isVacantLot ?? existing.isVacantLot,
-    bedrooms: scraped.bedrooms ?? existing.bedrooms,
-    bathrooms: scraped.bathrooms ?? existing.bathrooms,
-    sqftLiving: scraped.sqftLiving ?? existing.sqftLiving,
-    sqftLot: scraped.sqftLot ?? existing.sqftLot,
-    acres: scraped.acres ?? existing.acres,
-    yearBuilt: scraped.yearBuilt ?? existing.yearBuilt,
-    waterfront: scraped.waterfront ?? existing.waterfront,
-    waterfrontType: scraped.waterfrontType ?? existing.waterfrontType,
-    lengthFt: scraped.lengthFt ?? existing.lengthFt,
-    make: scraped.make ?? existing.make,
-    model: scraped.model ?? existing.model,
-    propulsion: scraped.propulsion ?? existing.propulsion,
-    listingDate: scraped.listingDate ?? existing.listingDate,
-    daysOnMarket: scraped.daysOnMarket ?? existing.daysOnMarket,
-    photoUrls: scraped.photoUrls ?? existing.photoUrls,
+    photoUrls: shouldReplacePhotos ? scrapedPhotos : existingPhotos,
     rawScrapedData: scraped.rawScrapedData ?? existing.rawScrapedData,
     fetchedAt: new Date(),
   };
-
-  if (!REFRESH_PROTECTED_STATUSES.has(existing.status)) {
-    data.status = scraped.status ?? existing.status;
-  }
-
-  return data;
 }
 
 export async function refreshListingFromSource(listing, context = {}) {
@@ -70,9 +49,9 @@ export async function refreshListingFromSource(listing, context = {}) {
   });
 
   const priceChanged = listing.listPrice !== updated.listPrice;
-  const statusChanged = listing.status !== updated.status;
+  const statusChanged = false;
 
-  if (priceChanged || statusChanged) {
+  if (priceChanged) {
     await createListingSnapshot(updated.id, updated);
   }
 

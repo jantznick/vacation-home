@@ -169,10 +169,10 @@ export default function ListingDetail() {
         lake: data.listing.lake ?? current?.lake,
       }));
 
-      if (data.priceChanged || data.statusChanged) {
+      if (data.priceChanged) {
         const snapshotData = await api.listings.snapshots(id);
         setSnapshots(snapshotData.snapshots);
-        showSuccess('Listing refreshed — price or status changed.');
+        showSuccess('Listing refreshed — price updated.');
       } else {
         showSuccess('Listing refreshed.');
       }

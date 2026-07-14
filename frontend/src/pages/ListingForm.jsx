@@ -209,6 +209,25 @@ export default function ListingForm() {
     return null;
   };
 
+  /** Edit-mode URL refresh: only price, plus photos if the scrape returns more. */
+  const applyRefreshFields = (fields) => {
+    setForm((current) => {
+      const currentPhotos = current.photoUrls ?? [];
+      const scrapedPhotos = fields.photoUrls ?? [];
+      const shouldReplacePhotos = scrapedPhotos.length > currentPhotos.length;
+
+      return {
+        ...current,
+        listPrice: fields.listPrice ?? current.listPrice,
+        photoUrls: shouldReplacePhotos ? scrapedPhotos : current.photoUrls,
+      };
+    });
+    if (fields.rawScrapedData != null) {
+      setRawScrapedData(fields.rawScrapedData);
+    }
+    return null;
+  };
+
   useEffect(() => {
     if (isEdit || !location.state?.importedFields) return;
 
@@ -257,8 +276,12 @@ export default function ListingForm() {
 
     try {
       const data = await api.ingest.preview(url);
-      const importWarning = applyPreviewFields(data.fields);
-      setImportUrl(data.fields.sourceUrl || url);
+      const importWarning = isEdit
+        ? applyRefreshFields(data.fields)
+        : applyPreviewFields(data.fields);
+      if (!isEdit) {
+        setImportUrl(data.fields.sourceUrl || url);
+      }
       setFetchWarnings([
         ...(data.warnings || []),
         ...(importWarning ? [importWarning] : []),

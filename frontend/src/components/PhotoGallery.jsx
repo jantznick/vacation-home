@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Card from './Card';
 
 function dedupePhotoUrls(urls) {
@@ -37,6 +38,33 @@ function CloseIcon() {
   );
 }
 
+function useScrollLock(active) {
+  useEffect(() => {
+    if (!active) return undefined;
+
+    const html = document.documentElement;
+    const { body } = document;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPaddingRight: body.style.paddingRight,
+    };
+
+    const scrollbarGap = window.innerWidth - html.clientWidth;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    if (scrollbarGap > 0) {
+      body.style.paddingRight = `${scrollbarGap}px`;
+    }
+
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.paddingRight = previous.bodyPaddingRight;
+    };
+  }, [active]);
+}
+
 function PhotoLightbox({ photos, index, onClose, onChangeIndex }) {
   const photo = photos[index];
   const hasPrev = index > 0;
@@ -50,6 +78,8 @@ function PhotoLightbox({ photos, index, onClose, onChangeIndex }) {
     if (hasNext) onChangeIndex(index + 1);
   }, [hasNext, index, onChangeIndex]);
 
+  useScrollLock(true);
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') onClose();
@@ -58,18 +88,16 @@ function PhotoLightbox({ photos, index, onClose, onChangeIndex }) {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, goPrev, goNext]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-black/90"
+      // Above Layout sticky header (z-[1100]); portal avoids stacking-context traps.
+      className="fixed inset-0 z-[1200] flex flex-col overscroll-none bg-black/90"
       onClick={onClose}
+      onWheel={(event) => event.preventDefault()}
+      onTouchMove={(event) => event.preventDefault()}
       role="presentation"
     >
       <div className="flex items-center justify-between px-4 py-3 text-white">
@@ -122,7 +150,8 @@ function PhotoLightbox({ photos, index, onClose, onChangeIndex }) {
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
