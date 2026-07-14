@@ -49,13 +49,18 @@ export function previewListingFromPaste({ sourceUrl, pastedData }) {
     throw new Error('Pasted page data is required');
   }
 
-  // YachtWorld page-source import is HTML-only — never fetch, never require the URL field.
+  // Always treat YachtWorld-shaped HTML as a local parse — never require a URL field.
   if (looksLikeYachtWorldPageSource(pastedData)) {
     return parseYachtWorldFromPaste({ pastedData });
   }
 
-  if (!sourceUrl?.trim()) {
-    throw new Error('Listing URL is required for this paste import');
+  // If someone pasted generic HTML that still embeds a YW listing URL, parse it.
+  try {
+    return parseYachtWorldFromPaste({ pastedData });
+  } catch (yachtworldError) {
+    if (!sourceUrl?.trim()) {
+      throw yachtworldError;
+    }
   }
 
   const sourceSite = detectSourceSite(sourceUrl);

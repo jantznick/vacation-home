@@ -185,10 +185,10 @@ export function createSearchAPI(searchId) {
           method: 'POST',
           body: JSON.stringify({ url }),
         }),
-      previewPaste: (url, pastedData) =>
+      previewPaste: (_url, pastedData) =>
         request(`${base}/ingest/preview-paste`, {
           method: 'POST',
-          body: JSON.stringify({ url: url || undefined, pastedData }),
+          body: JSON.stringify({ pastedData }),
         }),
       previewDnrLake: (url) =>
         request(`${base}/ingest/dnr-lake/preview`, {

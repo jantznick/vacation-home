@@ -69,7 +69,6 @@ export default function ListingForm() {
   });
   const [importUrl, setImportUrl] = useState('');
   const [pasteSource, setPasteSource] = useState('');
-  const [pasteFallbackOpen, setPasteFallbackOpen] = useState(false);
   const [regions, setRegions] = useState([]);
   const [lakes, setLakes] = useState([]);
   const [loading, setLoading] = useState(isEdit);
@@ -225,6 +224,26 @@ export default function ListingForm() {
     navigate(location.pathname, { replace: true, state: null });
   }, [isEdit, boatMode, location.pathname, location.state, navigate]);
 
+  const runBoatPageSourceImport = async (html) => {
+    setImporting(true);
+    setError('');
+    setFetchWarnings([]);
+
+    try {
+      const data = await api.ingest.previewPaste(null, html);
+      const importWarning = applyPreviewFields(data.fields);
+      setFetchWarnings([
+        ...(data.warnings || []),
+        ...(importWarning ? [importWarning] : []),
+      ]);
+      setPasteSource('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleUrlImport = async (urlOverride) => {
     const url = (urlOverride ?? importUrl).trim();
     if (!url) {
@@ -244,47 +263,21 @@ export default function ListingForm() {
         ...(data.warnings || []),
         ...(importWarning ? [importWarning] : []),
       ]);
-      if (boatMode && data.needsPaste) {
-        setPasteFallbackOpen(true);
-      }
     } catch (err) {
       setError(err.message);
-      if (boatMode) {
-        setPasteFallbackOpen(true);
-      }
     } finally {
       setImporting(false);
     }
   };
 
   const handlePasteImport = async () => {
-    if (!pasteSource.trim()) {
-      setError('Paste the listing page source');
+    const html = pasteSource.trim();
+    if (!html) {
+      setError('Paste the listing page source into the box first');
       return;
     }
 
-    setImporting(true);
-    setError('');
-    setFetchWarnings([]);
-
-    try {
-      // Page-source import is HTML-only. Do not send or update the URL field.
-      const data = await api.ingest.previewPaste(null, pasteSource.trim());
-      const importWarning = applyPreviewFields(data.fields);
-      setFetchWarnings([
-        ...(data.warnings || []),
-        ...(importWarning ? [importWarning] : []),
-      ]);
-      setPasteSource('');
-      if (!data.needsPaste) {
-        setPasteFallbackOpen(false);
-      }
-    } catch (err) {
-      setError(err.message);
-      setPasteFallbackOpen(true);
-    } finally {
-      setImporting(false);
-    }
+    await runBoatPageSourceImport(html);
   };
 
   const handleSoldCompToggle = (event) => {
@@ -419,7 +412,7 @@ export default function ListingForm() {
         title={pageTitle}
         description={
           boatMode
-            ? 'Paste a YachtWorld link to fill details, or enter them yourself.'
+            ? 'Import from YachtWorld by URL or page source, or enter details yourself.'
             : 'Paste a Zillow listing URL to import details and photos.'
         }
       />
@@ -427,9 +420,6 @@ export default function ListingForm() {
       {boatMode && (
         <Card className="mb-6 max-w-4xl">
           <h2 className="text-lg font-medium text-pine-900">Import from YachtWorld</h2>
-          <p className="mt-1 text-sm text-pine-600">
-            Paste a listing link to fill in details and photos.
-          </p>
 
           <div className="mt-4">
             <label className="mb-1 block text-sm font-medium text-pine-800">YachtWorld URL</label>
@@ -439,44 +429,36 @@ export default function ListingForm() {
               placeholder="https://www.yachtworld.com/yacht/..."
               className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
             />
+            <div className="mt-3">
+              <Button type="button" onClick={() => handleUrlImport()} disabled={importing}>
+                {importing ? 'Importing...' : isEdit ? 'Refresh from YachtWorld' : 'Import from URL'}
+              </Button>
+            </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" onClick={() => handleUrlImport()} disabled={importing}>
-              {importing ? 'Importing...' : isEdit ? 'Refresh from YachtWorld' : 'Import from URL'}
-            </Button>
-          </div>
-
-          <details
-            className="mt-4 rounded-md border border-pine-200 bg-pine-50/50 px-3 py-2"
-            open={pasteFallbackOpen}
-            onToggle={(event) => setPasteFallbackOpen(event.currentTarget.open)}
-          >
-            <summary className="cursor-pointer select-none text-sm font-medium text-pine-800">
-              If import didn’t work — paste page source
-            </summary>
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-pine-600">
-                On the listing page, use View Page Source, copy everything, and paste it here.
-                This only reads the pasted HTML — it does not fetch from YachtWorld.
-              </p>
-              <textarea
-                value={pasteSource}
-                onChange={(e) => setPasteSource(e.target.value)}
-                rows={5}
-                placeholder="Paste page source here"
-                className="w-full rounded-md border border-pine-300 bg-white px-3 py-2 font-mono text-xs"
-              />
+          <div className="mt-6 border-t border-pine-200 pt-6">
+            <label className="mb-1 block text-sm font-medium text-pine-800">Page source</label>
+            <p className="mb-2 text-sm text-pine-600">
+              Optional alternate import. Paste View Page Source HTML here — does not use the URL field above.
+            </p>
+            <textarea
+              value={pasteSource}
+              onChange={(e) => setPasteSource(e.target.value)}
+              rows={5}
+              placeholder="Paste page source here"
+              className="w-full rounded-md border border-pine-300 bg-white px-3 py-2 font-mono text-xs"
+            />
+            <div className="mt-3">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={handlePasteImport}
                 disabled={importing || !pasteSource.trim()}
               >
-                Import from page source
+                {importing ? 'Importing...' : 'Import from page source'}
               </Button>
             </div>
-          </details>
+          </div>
 
           {error && (
             <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

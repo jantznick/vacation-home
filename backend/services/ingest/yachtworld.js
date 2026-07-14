@@ -810,7 +810,8 @@ function looksBlocked(html, status) {
 
 /**
  * Fetch a YachtWorld listing URL and parse it.
- * Live fetches often hit bot protection — paste fallback is expected.
+ * When Cloudflare/bot protection blocks the full payload, still parse whatever HTML we got
+ * (JSON-LD / slug / partial fields) rather than failing the URL flow.
  */
 export async function fetchListingFromYachtWorld(urlString) {
   const sourceUrl = normalizeYachtWorldUrl(urlString);
@@ -820,11 +821,12 @@ export async function fetchListingFromYachtWorld(urlString) {
 
   try {
     const plain = await fetchHtmlPlain(sourceUrl);
-    // Thin pages often include JSON-LD only — that misses length/location/gallery.
     if (!looksBlocked(plain.html, plain.status) && hasRichYachtWorldPayload(plain.html)) {
       html = plain.html;
     } else if (!looksBlocked(plain.html, plain.status)) {
+      // Thin page (often JSON-LD only) — try browser, then fall back to parsing this.
       console.info('[yachtworld] Direct fetch lacked Redux listing payload; falling back to browser render.');
+      html = plain.html;
     } else {
       console.info('[yachtworld] Direct fetch blocked; falling back to browser render.');
     }
@@ -832,46 +834,51 @@ export async function fetchListingFromYachtWorld(urlString) {
     console.info(`[yachtworld] Direct fetch failed (${error.message}); falling back to browser render.`);
   }
 
-  if (!html) {
+  const thinHtml = html && !hasRichYachtWorldPayload(html) ? html : null;
+  if (!html || thinHtml) {
     try {
-      html = await fetchHtmlWithPuppeteer(sourceUrl);
+      const browserHtml = await fetchHtmlWithPuppeteer(sourceUrl);
       fetchMethod = 'puppeteer';
       if (isPuppeteerDebugMode()) {
         console.info('[yachtworld] Fetched with visible browser (local debug mode).');
       }
-      if (looksBlocked(html, 200)) {
+      if (!looksBlocked(browserHtml, 200)) {
+        html = browserHtml;
+      } else if (!html) {
         throw new Error('YachtWorld still showed a security check page.');
+      } else {
+        console.warn('[yachtworld] Browser still blocked; using thin direct-fetch HTML.');
       }
-      if (!hasRichYachtWorldPayload(html)) {
-        console.warn('[yachtworld] Browser HTML still missing Redux payload; parser may be incomplete.');
+      if (html && !hasRichYachtWorldPayload(html)) {
+        console.warn('[yachtworld] Browser HTML missing Redux payload; parsing partial page data.');
       }
     } catch (error) {
       console.warn('[yachtworld] Browser fetch failed:', error.message);
-      const slug = parseYachtWorldSlug(sourceUrl);
-      if (slug?.make || slug?.year) {
-        const fields = mapBoatRecord({
-          make: slug.make,
-          model: slug.model,
-          year: slug.year,
-          id: slug.listingId,
-        }, { sourceUrl, listingId: slug.listingId });
+      if (!html) {
+        const slug = parseYachtWorldSlug(sourceUrl);
+        if (slug?.make || slug?.year) {
+          const fields = mapBoatRecord({
+            make: slug.make,
+            model: slug.model,
+            year: slug.year,
+            id: slug.listingId,
+          }, { sourceUrl, listingId: slug.listingId });
 
-        return {
-          fields,
-          warnings: [
-            'Could not load the full listing. Filled what we could from the link — use page source below for the rest.',
-          ],
-          sourceSite: 'yachtworld',
-          fetchMethod: 'url-slug',
-          needsPaste: true,
-        };
+          return {
+            fields,
+            warnings: [
+              'Could not load the full listing page. Filled what we could from the link.',
+            ],
+            sourceSite: 'yachtworld',
+            fetchMethod: 'url-slug',
+            needsPaste: true,
+          };
+        }
+
+        throw new Error(
+          'Could not import from that YachtWorld link.',
+        );
       }
-
-      const err = new Error(
-        'Could not import from that YachtWorld link. Open the listing, View Page Source, copy everything, and paste it below.',
-      );
-      err.needsPaste = true;
-      throw err;
     }
   }
 

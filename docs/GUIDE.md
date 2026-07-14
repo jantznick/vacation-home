@@ -206,6 +206,8 @@ Start command: leave empty / use the Dockerfile `CMD` (`prisma migrate deploy` t
 
 YachtWorld URL import uses Puppeteer as a headless fallback when a plain fetch is blocked. Leave Puppeteer debug vars unset in production.
 
+On Railway/Cloudflare-blocked hosts, URL import may only get partial listing fields (JSON-LD / URL slug). Full fields require a successful Redux payload (often works from a residential IP).
+
 **Local `backend/.env` example**
 
 ```

@@ -24,7 +24,9 @@ function debugPauseMs() {
 function launchOptions() {
   const debug = isDebugMode();
   // Production always runs headless; local debug can set PUPPETEER_HEADLESS=false.
-  const headless = isProduction() || process.env.PUPPETEER_HEADLESS !== 'false';
+  const headless = isProduction() || process.env.PUPPETEER_HEADLESS !== 'false'
+    ? true
+    : false;
 
   const options = {
     headless,
@@ -65,7 +67,10 @@ function launchOptions() {
 
 async function getBrowser() {
   if (!browserPromise) {
-    browserPromise = puppeteer.launch(launchOptions());
+    browserPromise = puppeteer.launch(launchOptions()).catch((error) => {
+      browserPromise = null;
+      throw error;
+    });
   }
   return browserPromise;
 }
@@ -74,12 +79,18 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function hasReduxMarker(html) {
+  return typeof html === 'string' && /var\s+__REDUX_STATE__\s*=/.test(html);
+}
+
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 /**
- * Load a URL in Chrome/Chromium and return HTML that still includes YachtWorld's
- * Redux payload. After hydration, script tags are often emptied — so we re-inject
- * window.__REDUX_STATE__ when present.
+ * Load a URL in Chrome/Chromium and return HTML that includes YachtWorld's
+ * Redux payload when the server actually serves the listing page.
+ *
+ * On hosted platforms (Railway, etc.) Cloudflare often blocks the datacenter IP.
+ * Callers should treat missing Redux as a hard failure and ask for page-source paste.
  */
 export async function fetchHtmlWithPuppeteer(url) {
   const debug = isDebugMode();
@@ -87,11 +98,29 @@ export async function fetchHtmlWithPuppeteer(url) {
   const browser = await getBrowser();
   const page = await browser.newPage();
 
+  // Prefer the raw main-document body — it still has __REDUX_STATE__ before hydration.
+  let documentHtml = null;
+  const onResponse = async (response) => {
+    try {
+      if (response.request().resourceType() !== 'document') return;
+      if (!response.ok() && response.status() !== 304) return;
+      const text = await response.text();
+      if (!text) return;
+      if (hasReduxMarker(text) || !documentHtml || text.length > documentHtml.length) {
+        documentHtml = text;
+      }
+    } catch {
+      // Response body unavailable for some navigations; fall back to DOM capture.
+    }
+  };
+  page.on('response', onResponse);
+
   try {
     await page.setViewport({ width: 1366, height: 900 });
     await page.setUserAgent(USER_AGENT);
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
     });
 
     await page.evaluateOnNewDocument(() => {
@@ -107,9 +136,13 @@ export async function fetchHtmlWithPuppeteer(url) {
     const finalUrl = page.url();
     const title = await page.title().catch(() => '');
 
-    if (debug) {
-      console.log('[puppeteer debug] Navigation result:', { status, finalUrl, title });
-    }
+    console.info('[puppeteer] Navigation:', {
+      status,
+      finalUrl,
+      title: title.slice(0, 120),
+      documentHtmlBytes: documentHtml?.length ?? 0,
+      documentHasRedux: hasReduxMarker(documentHtml),
+    });
 
     const httpError = response && !response.ok() && status !== 304;
 
@@ -117,24 +150,20 @@ export async function fetchHtmlWithPuppeteer(url) {
       throw new Error(`Page returned HTTP ${status}`);
     }
 
-    if (httpError && debug) {
-      console.warn(
-        `[puppeteer debug] HTTP ${status} — browser window left open for ${pauseMs}ms. `
-        + 'Inspect the page, then it will close automatically.',
-      );
+    // Fast path: raw document response already has the listing payload.
+    if (hasReduxMarker(documentHtml)) {
+      return documentHtml;
     }
 
     await page.waitForFunction(
       () => {
         if (typeof window.__REDUX_STATE__ !== 'undefined') return true;
-        if (document.getElementById('__NEXT_DATA__')) return true;
         return [...document.scripts].some((script) => (
           (script.textContent || '').includes('var __REDUX_STATE__=')
         ));
       },
-      { timeout: 20000 },
+      { timeout: 15000 },
     ).catch(() => {});
-    await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {});
 
     if (debug && pauseMs > 0) {
       console.log(`[puppeteer debug] Pausing ${pauseMs}ms — inspect the browser window now`);
@@ -202,31 +231,26 @@ export async function fetchHtmlWithPuppeteer(url) {
       return {
         reduxJson: null,
         html: document.documentElement?.outerHTML || '',
+        title: document.title || '',
       };
     });
 
     let html = capture.html || await page.content();
     if (capture.reduxJson) {
-      // Re-inject so parsers that read page source still see Redux after hydration.
       html = `<script>var __REDUX_STATE__=${capture.reduxJson};</script>\n${html}`;
+    } else if (hasReduxMarker(documentHtml)) {
+      html = documentHtml;
     }
 
-    if (debug) {
-      console.log('[puppeteer debug] HTML snapshot:', {
-        length: html.length,
-        hasRedux: html.includes('var __REDUX_STATE__='),
-        capturedRedux: Boolean(capture.reduxJson),
-        hasNextData: html.includes('__NEXT_DATA__'),
-        hasLdJson: /type=["']application\/ld\+json["']/i.test(html),
-      });
-    }
-
-    if (httpError && debug) {
-      console.warn('[puppeteer debug] Returning HTML despite HTTP error for inspection/parsing');
-    }
+    console.info('[puppeteer] Capture result:', {
+      htmlBytes: html.length,
+      hasRedux: hasReduxMarker(html),
+      title: (capture.title || title || '').slice(0, 120),
+    });
 
     return html;
   } finally {
+    page.off('response', onResponse);
     await page.close();
   }
 }
