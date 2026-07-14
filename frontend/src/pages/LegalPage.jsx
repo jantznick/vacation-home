@@ -6,11 +6,11 @@ export function Privacy() {
   return (
     <MarketingContentPage
       title="Privacy policy"
-      intro={`${APP_NAME} is a small, focused product for researching vacation homes. This policy explains what we collect, why, and your choices.`}
+      intro={`${APP_NAME} is a small, focused product for researching vacation homes and boats. This policy explains what we collect, why, and your choices.`}
     >
       <ContentSection title="Who we are">
         <p>
-          {APP_NAME} ({APP_DOMAIN}) provides a shared workspace for tracking vacation-home
+          {APP_NAME} ({APP_DOMAIN}) provides a shared workspace for tracking vacation-home and boat
           listings, regions, and pricing research. We are not a brokerage, lender, or
           financial advisor.
         </p>
@@ -46,7 +46,7 @@ export function Privacy() {
             'Hosting and database providers that run the application.',
             'Google Maps Platform — when you use geocoding, drive times, or map features (addresses and coordinates you save are sent to Google per their terms).',
             'Resend or similar email providers — when workspace invites are sent.',
-            'Listing sources you paste manually (e.g. Zillow URLs). We are not affiliated with Zillow; their data is subject to their policies.',
+            'Listing sources you paste or import manually (e.g. Zillow or YachtWorld URLs). We are not affiliated with those sites; their data is subject to their policies.',
           ]}
         />
       </ContentSection>
@@ -118,8 +118,8 @@ export function Terms() {
     >
       <ContentSection title="The service">
         <p>
-          {APP_NAME} helps you and your collaborators research vacation homes: save listings,
-          organize regions, track price history, estimate value from your own comp library, and
+          {APP_NAME} helps you and your collaborators research vacation homes and boats: save listings,
+          organize home regions (when relevant), track price history, estimate value from your own comp library, and
           related tools. We may add, change, or remove features over time.
         </p>
       </ContentSection>
@@ -163,7 +163,7 @@ export function Terms() {
           Pricing models and deal labels are statistical estimates based on listings{' '}
           <strong>you</strong> save. They are research tools only — not appraisals, not
           Zestimates, and not a guarantee of market value or investment performance. Listing
-          details pasted from third-party sites (including Zillow) remain subject to those sites&apos;
+          details pasted or imported from third-party sites (including Zillow and YachtWorld) remain subject to those sites&apos;
           terms; we are not affiliated with them.
         </p>
       </ContentSection>

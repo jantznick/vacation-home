@@ -88,7 +88,20 @@ export function percentDiffFromMedian(value, median) {
   return Math.round(((value - median) / median) * 100);
 }
 
+const LENGTH_TOLERANCE = 0.2;
+
+function lengthBounds(lengthFt) {
+  return {
+    min: lengthFt * (1 - LENGTH_TOLERANCE),
+    max: lengthFt * (1 + LENGTH_TOLERANCE),
+  };
+}
+
 export function primaryMetricKey(listing) {
+  if (listing.lengthFt) {
+    return 'pricePerFoot';
+  }
+
   if (listing.isVacantLot) {
     return 'pricePerAcre';
   }
@@ -113,6 +126,10 @@ export function getMetricValue(listing, metricKey) {
     return listing.pricePerSqft ?? null;
   }
 
+  if (metricKey === 'pricePerFoot') {
+    return listing.pricePerFoot ?? null;
+  }
+
   return null;
 }
 
@@ -125,16 +142,38 @@ export function metricLabel(metricKey) {
     return '$/sqft';
   }
 
+  if (metricKey === 'pricePerFoot') {
+    return '$/ft';
+  }
+
   return metricKey;
 }
 
-export function isCompCandidate(target, candidate, { requireSameRegion = true } = {}) {
+export function isCompCandidate(target, candidate, {
+  requireSameRegion = true,
+  assetType = 'home',
+} = {}) {
   if (target.id === candidate.id) {
     return false;
   }
 
   if (!candidate.listPrice) {
     return false;
+  }
+
+  if (assetType === 'boat' || target.lengthFt != null || candidate.lengthFt != null) {
+    if (target.propulsion && candidate.propulsion && target.propulsion !== candidate.propulsion) {
+      return false;
+    }
+
+    if (target.lengthFt && candidate.lengthFt) {
+      const { min, max } = lengthBounds(target.lengthFt);
+      if (candidate.lengthFt < min || candidate.lengthFt > max) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   if (requireSameRegion && target.regionId !== candidate.regionId) {
@@ -342,8 +381,23 @@ export function buildListingAnalysis(targetListing, allListings) {
   };
 }
 
-export function compCriteriaDescription(target, { includeRegion = true } = {}) {
+export function compCriteriaDescription(target, { includeRegion = true, assetType = 'home' } = {}) {
   const parts = [];
+
+  if (assetType === 'boat' || target.lengthFt != null) {
+    if (target.propulsion) {
+      parts.push(target.propulsion === 'sail' ? 'sailboats' : `${target.propulsion} boats`);
+    } else {
+      parts.push('boats');
+    }
+
+    if (target.lengthFt) {
+      const { min, max } = lengthBounds(target.lengthFt);
+      parts.push(`between ${min.toFixed(0)} and ${max.toFixed(0)} ft`);
+    }
+
+    return parts.join(' · ');
+  }
 
   if (includeRegion) {
     parts.push('same region');
@@ -390,6 +444,12 @@ export function sortSerializedListings(listings, sortBy = 'createdAt', sortDir =
         break;
       case 'pricePerSqft':
         result = compareNullable(left.pricePerSqft, right.pricePerSqft);
+        break;
+      case 'pricePerFoot':
+        result = compareNullable(left.pricePerFoot, right.pricePerFoot);
+        break;
+      case 'lengthFt':
+        result = compareNullable(left.lengthFt, right.lengthFt);
         break;
       case 'acres':
         result = compareNullable(left.acres, right.acres);

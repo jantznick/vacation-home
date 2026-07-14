@@ -4,6 +4,7 @@ import prisma from '../lib/prisma.js';
 import { slugify, uniqueSearchSlug } from '../lib/slug.js';
 import { loadSearchMembership, requireEditor, requireOwner } from '../middleware/searchAccess.js';
 import { sendInviteEmail } from '../services/email/resend.js';
+import { isAssetType, normalizeAssetType, supportsRegions } from '../lib/assetTypes.js';
 import regionRoutes from './regions.js';
 import lakeRoutes from './lakes.js';
 import listingRoutes from './listings.js';
@@ -46,10 +47,24 @@ const searchSelect = {
   name: true,
   slug: true,
   description: true,
+  assetType: true,
+  pros: true,
+  cons: true,
   createdById: true,
   createdAt: true,
   updatedAt: true,
 };
+
+function normalizeTextField(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value == null) {
+    return null;
+  }
+  const trimmed = String(value).trim();
+  return trimmed || null;
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -87,21 +102,29 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, assetType, pros, cons } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    if (assetType !== undefined && !isAssetType(assetType)) {
+      return res.status(400).json({ error: 'assetType must be home, boat, or rv' });
+    }
+
     const slug = await uniqueSearchSlug(prisma, slugify(name));
     const userId = req.session.userId;
+    const resolvedAssetType = normalizeAssetType(assetType);
 
     const search = await prisma.$transaction(async (tx) => {
       const created = await tx.search.create({
         data: {
           name: name.trim(),
           slug,
-          description: description?.trim() || null,
+          description: normalizeTextField(description) ?? null,
+          assetType: resolvedAssetType,
+          pros: normalizeTextField(pros) ?? null,
+          cons: normalizeTextField(cons) ?? null,
           createdById: userId,
           members: {
             create: {
@@ -214,8 +237,14 @@ scopedRouter.get('/', async (req, res) => {
 
 scopedRouter.patch('/', requireEditor, async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, pros, cons, assetType } = req.body;
     const data = {};
+
+    if (assetType !== undefined) {
+      return res.status(400).json({
+        error: 'assetType cannot be changed after a search is created',
+      });
+    }
 
     if (name !== undefined) {
       if (!name.trim()) {
@@ -225,7 +254,13 @@ scopedRouter.patch('/', requireEditor, async (req, res) => {
       data.slug = await uniqueSearchSlug(prisma, slugify(name), req.search.id);
     }
     if (description !== undefined) {
-      data.description = description?.trim() || null;
+      data.description = normalizeTextField(description);
+    }
+    if (pros !== undefined) {
+      data.pros = normalizeTextField(pros);
+    }
+    if (cons !== undefined) {
+      data.cons = normalizeTextField(cons);
     }
 
     const search = await prisma.search.update({
@@ -554,8 +589,8 @@ scopedRouter.delete('/members/:userId', requireOwner, async (req, res) => {
 });
 
 scopedRouter.use('/pois', poiRoutes);
-scopedRouter.use('/regions', requireEditorUnlessRead, regionRoutes);
-scopedRouter.use('/lakes', requireEditorUnlessRead, lakeRoutes);
+scopedRouter.use('/regions', requireHomeAssetType, requireEditorUnlessRead, regionRoutes);
+scopedRouter.use('/lakes', requireHomeAssetType, requireEditorUnlessRead, lakeRoutes);
 scopedRouter.use('/listings', requireEditorUnlessRead, listingRoutes);
 scopedRouter.use('/comments', commentRoutes);
 scopedRouter.use('/ingest', requireEditor, ingestRoutes);
@@ -570,6 +605,13 @@ function requireEditorUnlessRead(req, res, next) {
     return next();
   }
   return requireEditor(req, res, next);
+}
+
+function requireHomeAssetType(req, res, next) {
+  if (supportsRegions(req.search?.assetType)) {
+    return next();
+  }
+  return res.status(404).json({ error: 'Not found' });
 }
 
 export const publicSearchRoutes = express.Router();

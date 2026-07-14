@@ -26,6 +26,10 @@ function formatSweepLabel(variable, value) {
     return Number(value).toLocaleString('en-US');
   }
 
+  if (variable === 'lengthFt') {
+    return `${Number(value) % 1 === 0 ? value : Number(value).toFixed(1)} ft`;
+  }
+
   if (variable === 'acres') {
     return Number(value) % 1 === 0 ? String(value) : Number(value).toFixed(1);
   }
@@ -307,10 +311,77 @@ const SKI_DEMO = {
   },
 };
 
+const BOAT_DEMO = {
+  modelName: 'Sail fleet default',
+  algorithmLabel: 'Length & year comps',
+  sampleCount: 16,
+  pricePickerNote:
+    'Illustrative boat curves — the same length of LOA can move price differently by regional fleet.',
+  comparePrompt:
+    'Great Lakes, Chesapeake, and Pacific Northwest are selected — slide length or year to see which market cares more.',
+  regions: [
+    { id: 'great-lakes', name: 'Great Lakes' },
+    { id: 'chesapeake', name: 'Chesapeake' },
+    { id: 'pnw', name: 'Pacific NW' },
+  ],
+  defaultRegionIds: ['great-lakes', 'chesapeake', 'pnw'],
+  defaultSpec: {
+    lengthFt: 32,
+    yearBuilt: 1998,
+  },
+  defaultVariable: 'lengthFt',
+  features: [
+    { key: 'lengthFt', label: 'Length (ft)', type: 'numeric' },
+    { key: 'yearBuilt', label: 'Year', type: 'numeric' },
+  ],
+  ranges: {
+    lengthFt: { min: 22, max: 45 },
+    yearBuilt: { min: 1980, max: 2020 },
+  },
+  regionCoeffs: {
+    'great-lakes': {
+      base: 18_000,
+      lengthFt: 2_050,
+      yearBuilt: 420,
+    },
+    chesapeake: {
+      base: 24_000,
+      lengthFt: 2_450,
+      yearBuilt: 380,
+    },
+    pnw: {
+      base: 28_000,
+      lengthFt: 2_700,
+      yearBuilt: 510,
+    },
+  },
+  variableStories: {
+    lengthFt:
+      'Pacific Northwest pays up fastest for length on this profile — Great Lakes still values LOA, but the slope is gentler.',
+    yearBuilt:
+      'Newer boats move Chesapeake and PNW more than the Great Lakes demo fleet, where refit condition often dominates age.',
+  },
+  estimate(spec, regionId) {
+    const coeffs = this.regionCoeffs[regionId] ?? this.regionCoeffs.chesapeake;
+    const lengthFt = Number(spec.lengthFt);
+    const yearBuilt = Number(spec.yearBuilt);
+    if (!Number.isFinite(lengthFt) || !Number.isFinite(yearBuilt)) {
+      return null;
+    }
+    const agePremium = Math.max(0, yearBuilt - 1985) * coeffs.yearBuilt;
+    return Math.round(
+      coeffs.base
+      + lengthFt * coeffs.lengthFt
+      + agePremium,
+    );
+  },
+};
+
 export const MARKETING_PRICE_PICKER_DEMOS = {
   forest: FOREST_DEMO,
   beach: BEACH_DEMO,
   ski: SKI_DEMO,
+  boats: BOAT_DEMO,
 };
 
 function applyVariable(spec, variable, value) {
@@ -474,6 +545,8 @@ function buildHoldingSummary(demo, spec, activeVariable, regionIds, compareRegio
       parts.push(`${feature.label}: ${value} acres`);
     } else if (feature.key === 'sqftLiving') {
       parts.push(`${feature.label}: ${Number(value).toLocaleString('en-US')} sq ft`);
+    } else if (feature.key === 'lengthFt') {
+      parts.push(`${feature.label}: ${value} ft`);
     } else if (feature.key === 'yearBuilt') {
       parts.push(`${feature.label}: ${value}`);
     } else {

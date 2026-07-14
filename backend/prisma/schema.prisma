@@ -43,6 +43,18 @@ enum PoiType {
   other
 }
 
+enum AssetType {
+  home
+  boat
+  rv
+}
+
+enum BoatPropulsion {
+  sail
+  motor
+  other
+}
+
 model User {
   id               String   @id @default(uuid())
   email            String   @unique
@@ -78,13 +90,18 @@ model Session {
 }
 
 model Search {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  slug        String   @unique
+  slug        String    @unique
   description String?
+  assetType   AssetType @default(home)
+  /// Category-level tradeoffs (newline-separated list items).
+  pros        String?
+  /// Category-level tradeoffs (newline-separated list items).
+  cons        String?
   createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   createdBy     User              @relation("SearchesCreated", fields: [createdById], references: [id], onDelete: Cascade)
   members       SearchMember[]
@@ -93,6 +110,8 @@ model Search {
   regions       Region[]
   listings      Listing[]
   pricingModels PricingModel[]
+
+  @@index([assetType])
 }
 
 model SearchMember {
@@ -199,15 +218,15 @@ model Lake {
 }
 
 model Listing {
-  id                 String        @id @default(uuid())
+  id                 String          @id @default(uuid())
   searchId           String
   sourceUrl          String?
   sourceSite         String?
   mlsNumber          String?
-  status             ListingStatus @default(active)
+  status             ListingStatus   @default(active)
   address            String?
   city               String?
-  state              String?       @default("WI")
+  state              String?         @default("WI")
   zip                String?
   latitude           Float?
   longitude          Float?
@@ -215,32 +234,38 @@ model Listing {
   driveDistanceMiles Float?
   listPrice          Int?
   soldPrice          Int?
-  isVacantLot        Boolean       @default(false)
+  isVacantLot        Boolean         @default(false)
   bedrooms           Float?
   bathrooms          Float?
   sqftLiving         Int?
   sqftLot            Int?
   acres              Float?
   yearBuilt          Int?
-  waterfront         Boolean       @default(false)
+  waterfront         Boolean         @default(false)
   waterfrontType     String?
+  /// Boat length overall (feet).
+  lengthFt           Float?
+  make               String?
+  model              String?
+  propulsion         BoatPropulsion?
   pros               String?
   cons               String?
   notes              String?
   interestLevel      Int?
-  visited            Boolean       @default(false)
+  visited            Boolean         @default(false)
   visitNotes         String?
   listingDate        DateTime?
   daysOnMarket       Int?
-  photoUrls          Json?         @db.JsonB
-  rawScrapedData     Json?         @db.JsonB
+  photoUrls          Json?           @db.JsonB
+  rawScrapedData     Json?           @db.JsonB
   fetchedAt          DateTime?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
-  search   Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  regionId String
-  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  search   Search  @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  /// Required for home Searches; optional for boats/RVs.
+  regionId String?
+  region   Region? @relation(fields: [regionId], references: [id], onDelete: Cascade)
 
   lakeId String?
   lake   Lake?   @relation(fields: [lakeId], references: [id], onDelete: SetNull)
@@ -253,6 +278,7 @@ model Listing {
   @@index([lakeId])
   @@index([isVacantLot])
   @@index([status])
+  @@index([propulsion])
 }
 
 model ListingCommute {

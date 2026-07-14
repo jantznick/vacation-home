@@ -7,9 +7,12 @@ import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import FormField from '../components/FormField';
 import ConfirmModal from '../components/ConfirmModal';
+import EditableLineList from '../components/EditableLineList';
+import { AssetTypeBadge } from '../components/AssetTypeTabs';
 import { showError, showInviteCreated, showSuccess } from '../lib/toast';
 import useAuthStore from '../store/authStore';
 import ZillowPasteImport from '../components/ZillowPasteImport';
+import { isBoatSearch } from '../lib/assetTypes';
 
 const MEMBER_ROLES = [
   { value: 'owner', label: 'Owner' },
@@ -147,6 +150,22 @@ export default function SearchSettings() {
   const [updatingMemberId, setUpdatingMemberId] = useState(null);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [removingMemberId, setRemovingMemberId] = useState(null);
+  const [detailsForm, setDetailsForm] = useState({
+    name: '',
+    description: '',
+    pros: null,
+    cons: null,
+  });
+  const [savingDetails, setSavingDetails] = useState(false);
+
+  const syncDetailsForm = (nextSearch) => {
+    setDetailsForm({
+      name: nextSearch?.name || '',
+      description: nextSearch?.description || '',
+      pros: nextSearch?.pros ?? null,
+      cons: nextSearch?.cons ?? null,
+    });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -157,6 +176,7 @@ export default function SearchSettings() {
         searchesAPI.members(searchId),
       ]);
       setSearch(searchData.search);
+      syncDetailsForm(searchData.search);
       setPois(poiData.pois);
       setMembers(memberData.members);
       setPendingInvites(memberData.pendingInvites || []);
@@ -361,8 +381,32 @@ export default function SearchSettings() {
     }
   };
 
+  const handleSaveDetails = async (e) => {
+    e.preventDefault();
+    setSavingDetails(true);
+    setError('');
+
+    try {
+      const data = await searchesAPI.update(searchId, {
+        name: detailsForm.name.trim(),
+        description: detailsForm.description.trim() || null,
+        pros: detailsForm.pros,
+        cons: detailsForm.cons,
+      });
+      setSearch((current) => ({ ...current, ...data.search }));
+      syncDetailsForm(data.search);
+      showSuccess('Search details saved.');
+    } catch (err) {
+      setError(err.message);
+      showError(err.message);
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
   const isOwner = search?.role === 'owner';
   const canEdit = search?.role === 'owner' || search?.role === 'editor';
+  const boatMode = isBoatSearch(search?.assetType);
 
   if (loading) {
     return <p className="text-pine-600">Loading settings...</p>;
@@ -379,6 +423,66 @@ export default function SearchSettings() {
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
+      <Card className="mb-6">
+        <form onSubmit={handleSaveDetails} className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium text-pine-900">Search details</h2>
+              <p className="mt-1 text-sm text-pine-600">
+                Name, description, and the tradeoffs that matter for this search.
+              </p>
+            </div>
+            <AssetTypeBadge assetType={search?.assetType} />
+          </div>
+
+          <FormField label="Name" htmlFor="search-name">
+            <input
+              id="search-name"
+              value={detailsForm.name}
+              onChange={(e) => setDetailsForm((current) => ({ ...current, name: e.target.value }))}
+              disabled={!canEdit}
+              className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              required
+            />
+          </FormField>
+
+          <FormField label="Description" htmlFor="search-description">
+            <textarea
+              id="search-description"
+              value={detailsForm.description}
+              onChange={(e) => setDetailsForm((current) => ({ ...current, description: e.target.value }))}
+              disabled={!canEdit}
+              rows={3}
+              placeholder={boatMode ? 'What kind of boats are you looking for?' : 'What are you looking for in this search?'}
+              className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+            />
+          </FormField>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <EditableLineList
+              label="Pros"
+              value={detailsForm.pros}
+              onChange={(pros) => setDetailsForm((current) => ({ ...current, pros }))}
+              placeholder="Add a pro…"
+              disabled={!canEdit}
+            />
+            <EditableLineList
+              label="Cons"
+              value={detailsForm.cons}
+              onChange={(cons) => setDetailsForm((current) => ({ ...current, cons }))}
+              placeholder="Add a con…"
+              disabled={!canEdit}
+            />
+          </div>
+
+          {canEdit && (
+            <Button type="submit" disabled={savingDetails}>
+              {savingDetails ? 'Saving...' : 'Save details'}
+            </Button>
+          )}
+        </form>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="text-lg font-medium text-pine-900">Your locations</h2>
@@ -388,7 +492,8 @@ export default function SearchSettings() {
 
           {pois.length === 0 ? (
             <p className="mt-4 text-sm text-pine-600">
-              Add at least one location (e.g. your current home) to calculate drive times.
+              Add at least one location (e.g. your current home) for drive times
+              {boatMode ? ' from where you keep or launch your boat.' : '.'}
             </p>
           ) : (
             <ul className="mt-4 space-y-2">
@@ -669,20 +774,19 @@ export default function SearchSettings() {
 
       <div className="mt-6 space-y-6">
         <Card>
-          <h2 className="text-lg font-medium text-pine-900">Pricing models</h2>
+          <h2 className="text-lg font-medium text-pine-900">Price estimates</h2>
           <p className="mt-1 text-sm text-pine-600">
-            Configure which features power price estimates on listings and the dream estimator.
-            Most searches can use the default.
+            Choose which details should drive price estimates. Most searches can stick with the default.
           </p>
           <Link
             to={searchPath(searchId, '/pricing-models')}
             className="mt-3 inline-block text-sm font-medium text-pine-700 hover:text-pine-900"
           >
-            Manage pricing models →
+            Manage price estimates →
           </Link>
         </Card>
 
-        <ZillowPasteImport canEdit={canEdit} />
+        {!boatMode && <ZillowPasteImport canEdit={canEdit} />}
       </div>
 
     </div>

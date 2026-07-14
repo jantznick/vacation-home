@@ -131,6 +131,50 @@ const SKI_THEME = {
   demoStatBg: 'bg-alpine-50',
 };
 
+const BOAT_THEME = {
+  pageBg: 'bg-ocean-50',
+  heroBorder: 'border-ocean-300',
+  heroRadial:
+    'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(3,105,161,0.18),transparent)]',
+  heroDots:
+    'opacity-[0.35] [background-image:radial-gradient(rgba(7,89,133,0.14)_1px,transparent_1px)] [background-size:24px_24px]',
+  accent: 'text-ocean-700',
+  badge: 'border-ocean-200 bg-white/90 text-ocean-900',
+  heroGlow: 'from-ocean-200/50 to-ocean-100/40',
+  selectorLabel: 'text-ocean-950',
+  selectorActive: 'border-transparent bg-ocean-800 text-white shadow-sm',
+  selectorIdle:
+    'border-transparent bg-white text-ocean-800 hover:bg-ocean-50',
+  pricingSection:
+    'border-ocean-950 bg-gradient-to-b from-ocean-950 via-ocean-900 to-ocean-900',
+  pricingCard: 'border-ocean-700/50 bg-ocean-800/40',
+  pricingHighlight: 'text-ocean-200',
+  pricingBullet: 'bg-ocean-300',
+  pricingTag: 'border-ocean-600 bg-ocean-800/80 text-ocean-100',
+  pricingWhyBox: 'border-ocean-700/50 bg-ocean-950/50',
+  featuresCard: 'border-ocean-200 bg-white hover:shadow-ocean-900/5',
+  stepsSection: 'border-ocean-200 bg-gradient-to-b from-ocean-50 to-white',
+  stepsLine: 'bg-ocean-200',
+  stepCircle: 'bg-ocean-800',
+  ctaBorder: 'border-ocean-600/40',
+  ctaBg: 'bg-gradient-to-br from-ocean-950 via-ocean-900 to-ocean-800',
+  ctaGlow: 'bg-[radial-gradient(circle_at_70%_0%,rgba(14,165,233,0.2),transparent_55%)]',
+  primaryBtn: '!bg-ocean-800 !text-white hover:!bg-ocean-900',
+  headerBorder: 'border-ocean-200/80',
+  logoHover: 'group-hover:text-ocean-800',
+  navLink: 'text-ocean-800 hover:bg-ocean-50 hover:text-ocean-950',
+  featureIcon: 'bg-ocean-100 text-ocean-800',
+  selectorGroup: 'bg-white shadow-md ring-1 ring-ocean-900/10',
+  secondaryBtn: 'border-ocean-300 hover:bg-ocean-50',
+  demoBorder: 'border-ocean-200/80',
+  demoHeaderBorder: 'border-ocean-100',
+  demoHeaderBg: 'bg-ocean-50/80',
+  demoShadow: 'shadow-ocean-900/10 ring-ocean-900/5',
+  demoTabActive: 'bg-ocean-800 text-white',
+  demoTabIdle: 'bg-ocean-100 text-ocean-800 hover:bg-ocean-200',
+  demoStatBg: 'bg-ocean-50',
+};
+
 export const MARKETING_SCENARIOS = {
   forest: {
     id: 'forest',
@@ -433,6 +477,114 @@ export const MARKETING_SCENARIOS = {
       },
     ],
     pricingFeatures: ['Living sqft & bed/bath', 'Region', 'Year built', 'Waterfront', 'Vacant lot vs with home'],
+  },
+
+  boats: {
+    id: 'boats',
+    label: 'Boats',
+    emoji: '⛵',
+    isBoat: true,
+    theme: BOAT_THEME,
+    heroAction: 'before you commit to the next haul-out',
+    heroBody:
+      '{appName} gives boat shoppers the same shared workspace and pricing models as home searches — save sail and power listings, train comps on length and year, and decide what\'s fair in the markets you actually shop.',
+    listingType: 'sail and power',
+    heroAccent: 'fairly priced',
+    pricingLensRegion:
+      'Compare within a boat market you define — Great Lakes, Chesapeake, and coastal fleets often behave like separate comp pools.',
+    pricingLensSimilarTitle: 'Similar boats',
+    pricingLensSimilar:
+      'A comp-style view matched on length, year, and propulsion from boats you have already saved.',
+    pricingInsight:
+      'Boat asking prices swing with length, age, gear, and local demand. A generic online estimate rarely matches the fleet you\'ve been watching all season.',
+    ctaHeadline: 'Start building your boat comp library',
+    pricePickerTitle: 'See how price moves — length, year, and market',
+    pricePickerLead:
+      'Price picker holds your dream boat steady while you slide length or year. With multiple markets selected, steeper lines mean that variable matters more there — the same foot of LOA can price differently on the Great Lakes vs the Chesapeake.',
+    pricePickerBlurb: 'On a boat search, compare Great Lakes vs Chesapeake as length and year move the estimate.',
+    demo: {
+      title: '1998 Catalina 320 · Annapolis, MD',
+      listPrice: '$84,900',
+      defaultTab: 'region',
+      featureHint: 'Uses length & year from your saved boat listings',
+      stats: [
+        { label: 'Length', value: '32 ft' },
+        { label: 'Year', value: '1998' },
+        { label: 'Type', value: 'Sail' },
+      ],
+      tabs: [
+        { id: 'all', label: 'All boats', count: 16 },
+        { id: 'region', label: 'Chesapeake fleet', count: 9 },
+        { id: 'similar', label: 'Similar boats', count: 6 },
+      ],
+      segments: {
+        all: {
+          expectedPrice: '$79,500',
+          deltaLabel: 'About 7% above model · based on 16 saved boats',
+          tone: 'above',
+        },
+        region: {
+          expectedPrice: '$76,000',
+          deltaLabel: 'About 12% above model · based on 9 Chesapeake sailboats',
+          tone: 'above',
+        },
+        similar: {
+          expectedPrice: '$82,500',
+          deltaLabel: 'In line with model · based on 6 similar 30–34 ft sailboats',
+          tone: 'inline',
+        },
+      },
+    },
+    features: [
+      {
+        icon: 'listings',
+        title: 'Boat tracker',
+        description: 'Import from YachtWorld, track asking price, and keep make, model, length, and year in one place.',
+      },
+      {
+        icon: 'chart',
+        title: 'Pricing by length & year',
+        description: 'Train simple models on the boats you save — ask whether a 32-footer is fairly priced for its age.',
+      },
+      {
+        icon: 'team',
+        title: 'Shared searches',
+        description: 'Invite your partner. Comment after sea trials and keep one source of truth instead of text threads.',
+      },
+      {
+        icon: 'drive',
+        title: 'Broker travel context',
+        description: 'Save home and marina locations — know how far you are traveling before you book a showing.',
+      },
+      {
+        icon: 'map',
+        title: 'Maps & pins',
+        description: 'Pin boats that have a location so you can see the fleet on one map.',
+      },
+      {
+        icon: 'chart',
+        title: 'Price history',
+        description: 'Catch asking-price drops on boats you loved last season but weren’t ready to buy.',
+      },
+    ],
+    steps: [
+      {
+        step: '1',
+        title: 'Create a boat search',
+        description: 'Start a Boats workspace, invite your partner, and add the places you travel from.',
+      },
+      {
+        step: '2',
+        title: 'Build your fleet dataset',
+        description: 'Import YachtWorld listings as you browse — sail and power — so models sharpen with every save.',
+      },
+      {
+        step: '3',
+        title: 'Compare with confidence',
+        description: 'Use length/year pricing, notes, and price history to decide when to tour or walk away.',
+      },
+    ],
+    pricingFeatures: ['Length (ft)', 'Year', 'Make & model', 'Sail vs motor', 'List price history'],
   },
 };
 

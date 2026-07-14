@@ -14,10 +14,19 @@ const inputClass = 'w-full rounded-md border border-pine-300 px-3 py-2 text-sm';
 
 export default function MarketingPricePickerDemo({ scenarioId, theme, className = '' }) {
   const demo = getMarketingPricePickerDemo(scenarioId);
-  const [spec, setSpec] = useState(demo.defaultSpec);
-  const [regionIds, setRegionIds] = useState(demo.defaultRegionIds);
+  const [spec, setSpec] = useState(() => ({ ...demo.defaultSpec }));
+  const [regionIds, setRegionIds] = useState(() => [...demo.defaultRegionIds]);
   const [focusedRegionId, setFocusedRegionId] = useState(demo.defaultRegionIds[0]);
   const [activeVariable, setActiveVariable] = useState(demo.defaultVariable);
+
+  // Keep local state in sync when the vacation-type scenario changes (including HMR).
+  useEffect(() => {
+    const next = getMarketingPricePickerDemo(scenarioId);
+    setSpec({ ...next.defaultSpec });
+    setRegionIds([...next.defaultRegionIds]);
+    setFocusedRegionId(next.defaultRegionIds[0]);
+    setActiveVariable(next.defaultVariable);
+  }, [scenarioId]);
 
   const curve = useMemo(
     () => buildMarketingPricePickerState(demo, {
@@ -43,7 +52,7 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
   }, [curve, activeValue, compareRegions, focusedRegionId]);
 
   const seriesEstimates = useMemo(() => {
-    if (!curve.series?.length || activeValue == null) {
+    if (!curve.series?.length || activeValue == null || Number.isNaN(Number(activeValue))) {
       return [];
     }
 
@@ -53,7 +62,7 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
         regionName: item.regionName,
         estimatedPrice: interpolateCurvePrice(item.points, activeValue),
       }))
-      .filter((item) => item.estimatedPrice != null);
+      .filter((item) => item.estimatedPrice != null && !Number.isNaN(item.estimatedPrice));
   }, [curve, activeValue]);
 
   const handleRegionToggle = (regionId, checked) => {
@@ -103,7 +112,7 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
     return {
       min: curve.range?.min ?? 0,
       max: curve.range?.max ?? 1,
-      step: activeVariable === 'bedrooms' || activeVariable === 'bathrooms' ? 0.5 : 1,
+      step: activeVariable === 'bedrooms' || activeVariable === 'bathrooms' || activeVariable === 'lengthFt' ? 0.5 : 1,
       value: activeValue ?? curve.range?.min ?? 0,
       labels: null,
     };
@@ -113,8 +122,18 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
     if (curve.sensitivityInsight?.steepestRegionId) {
       setFocusedRegionId(curve.sensitivityInsight.steepestRegionId);
     }
-  }, [activeVariable, scenarioId]);
+  }, [activeVariable, scenarioId, curve.sensitivityInsight?.steepestRegionId]);
 
+  const isBoatDemo = scenarioId === 'boats';
+  const profileTitle = isBoatDemo ? 'Boat profile' : 'Property profile';
+  const profileDescription = isBoatDemo
+    ? 'Markets, length, year — tap to adjust the demo profile'
+    : 'Regions, beds, waterfront — tap to adjust the demo profile';
+  const regionHeading = isBoatDemo ? 'Market' : 'Region';
+  const tryItHint = isBoatDemo
+    ? 'switch variables above the chart — each market responds differently to length and year.'
+    : 'switch variables above the chart — each region responds differently to lot size, waterfront, and more.';
+  const sampleNoun = isBoatDemo ? 'sample boats' : 'sample homes';
   const shellBorder = theme?.demoBorder || 'border-pine-200/80';
   const shellShadow = theme?.demoShadow || 'shadow-pine-900/10 ring-pine-900/5';
 
@@ -132,12 +151,12 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
       <div className="grid gap-0 lg:grid-cols-[minmax(0,280px)_1fr]">
         <div className="order-2 border-pine-100 p-4 sm:p-5 lg:order-1 lg:border-r">
           <CollapsiblePanel
-            title="Property profile"
-            description="Regions, beds, waterfront — tap to adjust the demo profile"
+            title={profileTitle}
+            description={profileDescription}
           >
             <div className="mt-4 space-y-4 lg:mt-0">
               <div>
-                <p className="text-sm font-medium text-pine-800">Region</p>
+                <p className="text-sm font-medium text-pine-800">{regionHeading}</p>
                 <p className="mt-1 text-xs text-pine-500">
                   Select multiple to compare lines on the chart.
                 </p>
@@ -170,7 +189,7 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
                       <input
                         id={`demo-${field.key}`}
                         type="number"
-                        step={field.key === 'acres' ? '0.01' : '1'}
+                        step={field.key === 'acres' || field.key === 'lengthFt' ? '0.1' : '1'}
                         value={spec[field.key] ?? ''}
                         disabled={field.key === activeVariable}
                         onChange={(event) => handleProfileChange(field.key, event.target.value)}
@@ -189,7 +208,7 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
         <div className="order-1 p-4 sm:p-5 lg:order-2">
           <p className="mb-3 text-sm text-pine-600">
             <span className="font-medium text-pine-800">Try it:</span>
-            {' '}switch variables above the chart — each region responds differently to lot size, waterfront, and more.
+            {' '}{tryItHint}
           </p>
 
           <PricePickerVariablePills
@@ -227,7 +246,7 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
               </p>
             )}
             <p className="mt-1 text-xs text-pine-500">
-              From {curve.model.name} · {curve.model.algorithmLabel} · {curve.sampleCount} sample homes
+              From {curve.model.name} · {curve.model.algorithmLabel} · {curve.sampleCount} {sampleNoun}
             </p>
             {curve.holdingSummary && (
               <p className="mt-3 text-sm text-pine-600">
@@ -263,7 +282,9 @@ export default function MarketingPricePickerDemo({ scenarioId, theme, className 
               <span className="font-medium tabular-nums text-pine-900">
                 {curve.variableType === 'boolean'
                   ? (activeValue ? 'Yes' : 'No')
-                  : activeValue}
+                  : activeVariable === 'lengthFt' && activeValue != null
+                    ? `${activeValue} ft`
+                    : activeValue}
               </span>
             </div>
             <input

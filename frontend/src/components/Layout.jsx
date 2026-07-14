@@ -5,17 +5,28 @@ import { authAPI, searchesAPI } from '../api/api';
 import { searchPath } from '../hooks/useSearch';
 import { setLastSearchId } from '../pages/Searches';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/brand';
+import { assetTypeMeta, supportsRegions } from '../lib/assetTypes';
 import SearchSwitcher from './SearchSwitcher';
 
-const navItems = (searchId) => [
-  { to: searchPath(searchId), label: 'Dashboard', end: true },
-  { to: searchPath(searchId, '/regions'), label: 'Regions' },
-  { to: searchPath(searchId, '/listings'), label: 'Listings' },
-  { to: searchPath(searchId, '/map'), label: 'Map' },
-  { to: searchPath(searchId, '/estimator'), label: 'Estimator' },
-  { to: searchPath(searchId, '/price-picker'), label: 'Price picker' },
-  { to: searchPath(searchId, '/settings'), label: 'Settings' },
-];
+const navItems = (searchId, assetType = 'home') => {
+  const items = [
+    { to: searchPath(searchId), label: 'Dashboard', end: true },
+  ];
+
+  if (supportsRegions(assetType)) {
+    items.push({ to: searchPath(searchId, '/regions'), label: 'Regions' });
+  }
+
+  items.push(
+    { to: searchPath(searchId, '/listings'), label: 'Listings' },
+    { to: searchPath(searchId, '/map'), label: 'Map' },
+    { to: searchPath(searchId, '/estimator'), label: 'Estimator' },
+    { to: searchPath(searchId, '/price-picker'), label: 'Price picker' },
+    { to: searchPath(searchId, '/settings'), label: 'Settings' },
+  );
+
+  return items;
+};
 
 const navLinkClass = ({ isActive }) =>
   `block rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -30,6 +41,7 @@ export default function Layout({ children }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [searches, setSearches] = useState([]);
+  const [currentSearch, setCurrentSearch] = useState(null);
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
@@ -49,6 +61,7 @@ export default function Layout({ children }) {
           return;
         }
         setSearches(listData.searches);
+        setCurrentSearch(listData.searches.find((s) => s.id === searchId) || null);
         setLastSearchId(searchId);
       } catch {
         navigate('/searches', { replace: true });
@@ -74,7 +87,8 @@ export default function Layout({ children }) {
   };
 
   const showSearchNav = Boolean(searchId);
-  const items = showSearchNav ? navItems(searchId) : [];
+  const assetType = currentSearch?.assetType || 'home';
+  const items = showSearchNav ? navItems(searchId, assetType) : [];
 
   return (
     <div className="min-h-screen">
@@ -160,6 +174,11 @@ export default function Layout({ children }) {
 
           {showSearchNav && (
             <nav className="hidden flex-wrap gap-1 pb-3 sm:flex">
+              {currentSearch && (
+                <span className="mr-2 self-center rounded bg-pine-800 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-pine-300">
+                  {assetTypeMeta(assetType).singular}
+                </span>
+              )}
               {items.map((item) => (
                 <NavLink
                   key={item.to}

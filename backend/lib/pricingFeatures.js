@@ -49,9 +49,19 @@ export const PRICING_FEATURE_CATALOG = {
     label: 'Days on market',
     description: 'Days listed',
   },
+  lengthFt: {
+    key: 'lengthFt',
+    label: 'Length (ft)',
+    description: 'Overall length in feet',
+  },
+  isSail: {
+    key: 'isSail',
+    label: 'Sailboat',
+    description: 'Sail vs motor/other propulsion',
+  },
 };
 
-/** Built-in feature set when no custom default model exists. */
+/** Built-in feature set when no custom default model exists (home Searches). */
 export const DEFAULT_PRICING_FEATURES = [
   'acres',
   'isVacantLot',
@@ -61,6 +71,19 @@ export const DEFAULT_PRICING_FEATURES = [
   'waterfront',
   'region',
 ];
+
+/** Built-in feature set for boat Searches. */
+export const DEFAULT_BOAT_PRICING_FEATURES = [
+  'lengthFt',
+  'yearBuilt',
+];
+
+export function defaultPricingFeaturesForAssetType(assetType) {
+  if (assetType === 'boat') {
+    return [...DEFAULT_BOAT_PRICING_FEATURES];
+  }
+  return [...DEFAULT_PRICING_FEATURES];
+}
 
 export const PRICING_FEATURE_KEYS = Object.keys(PRICING_FEATURE_CATALOG);
 
@@ -88,12 +111,13 @@ export const DEFAULT_PRICING_ALGORITHM = 'log_size_linear_regression';
 /** Bump when training output shape or default algorithm changes — triggers auto-retrain. */
 export const PRICING_TRAINING_PIPELINE_VERSION = 3;
 
-const LOG_SIZE_FEATURES = new Set(['acres', 'sqftLiving', 'sqftLot']);
+const LOG_SIZE_FEATURES = new Set(['acres', 'sqftLiving', 'sqftLot', 'lengthFt']);
 
 const LOG_SIZE_FLOOR = {
   acres: 0.1,
   sqftLiving: 100,
   sqftLot: 100,
+  lengthFt: 10,
 };
 
 /** Paired with isVacantLot when training data includes both land and homes. */
@@ -254,6 +278,8 @@ export function extractNumericFeature(listing, featureKey) {
       return numericValue(listing.yearBuilt);
     case 'daysOnMarket':
       return numericValue(listing.daysOnMarket);
+    case 'lengthFt':
+      return numericValue(listing.lengthFt);
     case 'waterfront':
       if (listing.waterfront === null || listing.waterfront === undefined) {
         return null;
@@ -264,6 +290,11 @@ export function extractNumericFeature(listing, featureKey) {
         return null;
       }
       return booleanValue(listing.isVacantLot);
+    case 'isSail':
+      if (!listing.propulsion) {
+        return null;
+      }
+      return booleanValue(listing.propulsion === 'sail');
     default:
       return null;
   }

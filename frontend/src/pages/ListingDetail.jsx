@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
+import useCurrentSearch from '../hooks/useCurrentSearch';
 import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
@@ -23,6 +24,18 @@ import {
 import ListingStaleBadge from '../components/ListingStaleBadge';
 import { formatFetchedAt } from '../lib/listingFreshness';
 import { showError, showSuccess } from '../lib/toast';
+import { BOAT_PROPULSIONS, isBoatSearch } from '../lib/assetTypes';
+
+function boatTitle(listing) {
+  const name = [listing.make, listing.model].filter(Boolean).join(' ');
+  if (name) return name;
+  if (listing.lengthFt) return `${listing.lengthFt} ft boat`;
+  return listing.address || 'Untitled boat';
+}
+
+function propulsionLabel(value) {
+  return BOAT_PROPULSIONS.find((option) => option.value === value)?.label || value;
+}
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -31,6 +44,7 @@ export default function ListingDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { canEdit } = useSearchAccess();
+  const { assetType } = useCurrentSearch();
   const [listing, setListing] = useState(null);
   const [snapshots, setSnapshots] = useState([]);
   const [commutes, setCommutes] = useState([]);
@@ -181,16 +195,30 @@ export default function ListingDetail() {
     return <p className="text-red-700">{error || 'Listing not found'}</p>;
   }
 
+  const boatMode = isBoatSearch(assetType)
+    || listing.lengthFt != null
+    || listing.make
+    || listing.propulsion;
+
+  const title = boatMode ? boatTitle(listing) : (listing.address || 'Untitled listing');
+  const description = boatMode
+    ? [listing.city, listing.state].filter(Boolean).join(', ')
+    : [listing.city, listing.state, listing.zip].filter(Boolean).join(', ');
+
   return (
     <div>
       <PageHeader
-        title={listing.address || 'Untitled listing'}
-        description={[listing.city, listing.state, listing.zip].filter(Boolean).join(', ')}
+        title={title}
+        description={description}
         actions={canEdit ? (
           <>
             {listing.canRefresh && (
               <Button variant="secondary" onClick={handleRefresh} disabled={refreshing}>
-                {refreshing ? 'Refreshing...' : 'Refresh from Zillow'}
+                {refreshing
+                  ? 'Refreshing...'
+                  : boatMode
+                    ? 'Refresh from YachtWorld'
+                    : 'Refresh from Zillow'}
               </Button>
             )}
             <Link to={searchPath(searchId, `/listings/${id}/edit`)}>
@@ -218,8 +246,9 @@ export default function ListingDetail() {
           <span className="mr-2 inline-block rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
             Sold
           </span>
-          Hidden from active research views. Included in pricing model training
-          {listing.soldPrice != null ? ` at ${formatCurrency(listing.soldPrice)}` : ''}.
+          Hidden from your active research list
+          {listing.soldPrice != null ? ` · sold for ${formatCurrency(listing.soldPrice)}` : ''}.
+          Still used for price comparisons.
         </p>
       )}
 
@@ -229,7 +258,9 @@ export default function ListingDetail() {
           {listing.fetchedAt ? (
             <span>Last refreshed {formatFetchedAt(listing.fetchedAt)}</span>
           ) : (
-            <span>Not refreshed from Zillow yet</span>
+            <span>
+              Not refreshed from {boatMode ? 'YachtWorld' : 'Zillow'} yet
+            </span>
           )}
         </div>
       )}
@@ -251,15 +282,17 @@ export default function ListingDetail() {
                 <dt className="text-xs uppercase tracking-wide text-pine-500">Status</dt>
                 <dd className="text-sm text-pine-900">{statusLabel(listing.status, LISTING_STATUSES)}</dd>
               </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-pine-500">Region</dt>
-                <dd className="text-sm text-pine-900">
-                  <Link to={searchPath(searchId, `/regions/${listing.regionId}`)} className="text-pine-700 hover:text-pine-900">
-                    {listing.region?.name}
-                  </Link>
-                </dd>
-              </div>
-              {listing.lake && (
+              {!boatMode && listing.regionId && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-pine-500">Region</dt>
+                  <dd className="text-sm text-pine-900">
+                    <Link to={searchPath(searchId, `/regions/${listing.regionId}`)} className="text-pine-700 hover:text-pine-900">
+                      {listing.region?.name || 'Unknown region'}
+                    </Link>
+                  </dd>
+                </div>
+              )}
+              {!boatMode && listing.lake && (
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-pine-500">Lake</dt>
                   <dd className="text-sm text-pine-900">{listing.lake.name}</dd>
@@ -283,42 +316,72 @@ export default function ListingDetail() {
                   <dd className="text-sm text-pine-900">{formatCurrency(listing.listPrice)}</dd>
                 </div>
               )}
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-pine-500">Type</dt>
-                <dd className="text-sm text-pine-900">
-                  {listing.isVacantLot ? 'Vacant lot' : 'With home'}
-                  {listing.waterfront ? ' · Waterfront' : ''}
-                </dd>
-              </div>
-              {listing.acres != null && (
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-pine-500">Acres</dt>
-                  <dd className="text-sm text-pine-900">
-                    {listing.acres}
-                    {listing.pricePerAcre ? ` · ${formatCurrency(listing.pricePerAcre)}/acre` : ''}
-                  </dd>
-                </div>
-              )}
-              {listing.sqftLiving != null && !listing.isVacantLot && (
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-pine-500">Living sqft</dt>
-                  <dd className="text-sm text-pine-900">
-                    {formatNumber(listing.sqftLiving)}
-                    {listing.pricePerSqft ? ` · ${formatCurrency(listing.pricePerSqft)}/sqft` : ''}
-                  </dd>
-                </div>
-              )}
-              {listing.bedrooms != null && (
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-pine-500">Bedrooms</dt>
-                  <dd className="text-sm text-pine-900">{listing.bedrooms}</dd>
-                </div>
-              )}
-              {listing.bathrooms != null && (
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-pine-500">Bathrooms</dt>
-                  <dd className="text-sm text-pine-900">{listing.bathrooms}</dd>
-                </div>
+              {boatMode ? (
+                <>
+                  {(listing.make || listing.model) && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Make / model</dt>
+                      <dd className="text-sm text-pine-900">
+                        {[listing.make, listing.model].filter(Boolean).join(' ')}
+                      </dd>
+                    </div>
+                  )}
+                  {listing.lengthFt != null && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Length</dt>
+                      <dd className="text-sm text-pine-900">
+                        {listing.lengthFt} ft
+                        {listing.pricePerFoot ? ` · ${formatCurrency(listing.pricePerFoot)}/ft` : ''}
+                      </dd>
+                    </div>
+                  )}
+                  {listing.propulsion && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Propulsion</dt>
+                      <dd className="text-sm text-pine-900">{propulsionLabel(listing.propulsion)}</dd>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-pine-500">Type</dt>
+                    <dd className="text-sm text-pine-900">
+                      {listing.isVacantLot ? 'Vacant lot' : 'With home'}
+                      {listing.waterfront ? ' · Waterfront' : ''}
+                    </dd>
+                  </div>
+                  {listing.acres != null && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Acres</dt>
+                      <dd className="text-sm text-pine-900">
+                        {listing.acres}
+                        {listing.pricePerAcre ? ` · ${formatCurrency(listing.pricePerAcre)}/acre` : ''}
+                      </dd>
+                    </div>
+                  )}
+                  {listing.sqftLiving != null && !listing.isVacantLot && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Living sqft</dt>
+                      <dd className="text-sm text-pine-900">
+                        {formatNumber(listing.sqftLiving)}
+                        {listing.pricePerSqft ? ` · ${formatCurrency(listing.pricePerSqft)}/sqft` : ''}
+                      </dd>
+                    </div>
+                  )}
+                  {listing.bedrooms != null && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Bedrooms</dt>
+                      <dd className="text-sm text-pine-900">{listing.bedrooms}</dd>
+                    </div>
+                  )}
+                  {listing.bathrooms != null && (
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-pine-500">Bathrooms</dt>
+                      <dd className="text-sm text-pine-900">{listing.bathrooms}</dd>
+                    </div>
+                  )}
+                </>
               )}
               {listing.yearBuilt != null && (
                 <div>
@@ -354,7 +417,9 @@ export default function ListingDetail() {
             )}
             {listing.visitNotes && (
               <div className="mt-4">
-                <h3 className="text-sm font-medium text-pine-800">Visit notes</h3>
+                <h3 className="text-sm font-medium text-pine-800">
+                  {boatMode ? 'Inspection notes' : 'Visit notes'}
+                </h3>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-pine-700">{listing.visitNotes}</p>
               </div>
             )}
@@ -366,67 +431,69 @@ export default function ListingDetail() {
         </div>
 
         <div className="space-y-6">
-          <Card className="h-fit">
-            <h2 className="text-lg font-medium text-pine-900">Location</h2>
-            <div className="mt-4">
-              <LocationDriveTime
-                locationLabel="Property"
-                addressLine={listingAddressLine}
-                latitude={listing.latitude}
-                longitude={listing.longitude}
-                driveTimeMinutes={listing.driveTimeMinutes}
-                driveDistanceMiles={listing.driveDistanceMiles}
-                onGeocode={canEdit && listing.latitude == null ? handleGeocodeListing : undefined}
-                onDriveTime={canEdit ? handleListingDriveTime : undefined}
-                geocoding={geocoding}
-                calculating={calculatingDriveTime}
-                error={locationError}
-                originLabel={originLabel}
-              />
-            </div>
-            {listing.latitude != null && listing.longitude != null && (
+          {(!boatMode || listingAddressLine || listing.latitude != null || listing.city || listing.state) && (
+            <Card className="h-fit">
+              <h2 className="text-lg font-medium text-pine-900">Location</h2>
               <div className="mt-4">
-                <RouteMap
-                  key={`${listing.id}-${listing.latitude}-${listing.longitude}`}
-                  destination={listing}
-                  destinationType="listing"
-                  destinationLabel={listing.address || 'Listing'}
-                  destinationSublabel={listingAddressLine}
-                  destinationHref={searchPath(searchId, `/listings/${listing.id}`)}
+                <LocationDriveTime
+                  locationLabel={boatMode ? 'Boat location' : 'Property'}
+                  addressLine={listingAddressLine}
+                  latitude={listing.latitude}
+                  longitude={listing.longitude}
+                  driveTimeMinutes={listing.driveTimeMinutes}
+                  driveDistanceMiles={listing.driveDistanceMiles}
+                  onGeocode={canEdit && listing.latitude == null ? handleGeocodeListing : undefined}
+                  onDriveTime={canEdit ? handleListingDriveTime : undefined}
+                  geocoding={geocoding}
+                  calculating={calculatingDriveTime}
+                  error={locationError}
+                  originLabel={originLabel}
                 />
               </div>
-            )}
-            {commutes.length > 0 && (
-              <div className="mt-4 border-t border-pine-100 pt-4">
-                <h3 className="text-sm font-medium text-pine-800">Drive times from your locations</h3>
-                <ul className="mt-3 space-y-2">
-                  {commutes.map((commute) => (
-                    <li
-                      key={commute.poiId}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <span className="text-pine-800">
-                        {commute.poi.label}
-                        {commute.poi.isPrimary && (
-                          <span className="ml-2 rounded bg-pine-100 px-1.5 py-0.5 text-xs text-pine-600">
-                            Primary
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-pine-600">
-                        {commute.driveTimeMinutes != null
-                          ? formatDriveTime(commute.driveTimeMinutes)
-                          : '—'}
-                        {commute.driveDistanceMiles != null && (
-                          <> · {commute.driveDistanceMiles} mi</>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </Card>
+              {listing.latitude != null && listing.longitude != null && (
+                <div className="mt-4">
+                  <RouteMap
+                    key={`${listing.id}-${listing.latitude}-${listing.longitude}`}
+                    destination={listing}
+                    destinationType="listing"
+                    destinationLabel={title}
+                    destinationSublabel={listingAddressLine}
+                    destinationHref={searchPath(searchId, `/listings/${listing.id}`)}
+                  />
+                </div>
+              )}
+              {commutes.length > 0 && (
+                <div className="mt-4 border-t border-pine-100 pt-4">
+                  <h3 className="text-sm font-medium text-pine-800">Drive times from your locations</h3>
+                  <ul className="mt-3 space-y-2">
+                    {commutes.map((commute) => (
+                      <li
+                        key={commute.poiId}
+                        className="flex items-center justify-between gap-3 text-sm"
+                      >
+                        <span className="text-pine-800">
+                          {commute.poi.label}
+                          {commute.poi.isPrimary && (
+                            <span className="ml-2 rounded bg-pine-100 px-1.5 py-0.5 text-xs text-pine-600">
+                              Primary
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-pine-600">
+                          {commute.driveTimeMinutes != null
+                            ? formatDriveTime(commute.driveTimeMinutes)
+                            : '—'}
+                          {commute.driveDistanceMiles != null && (
+                            <> · {commute.driveDistanceMiles} mi</>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Card>
+          )}
 
           <Card className="h-fit">
             <h2 className="text-lg font-medium text-pine-900">Source</h2>
@@ -458,6 +525,9 @@ export default function ListingDetail() {
                   <dd className="text-pine-900">{listing.daysOnMarket}</dd>
                 </div>
               )}
+              {!listing.sourceUrl && !listing.mlsNumber && listing.daysOnMarket == null && (
+                <p className="text-pine-600">No source details yet.</p>
+              )}
             </dl>
           </Card>
 
@@ -467,8 +537,8 @@ export default function ListingDetail() {
 
       {showDeleteConfirm && (
         <ConfirmModal
-          title="Delete listing"
-          message={`Delete ${listing.address || 'this listing'}?`}
+          title={boatMode ? 'Delete boat' : 'Delete listing'}
+          message={`Delete ${title}?`}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           loading={deleting}

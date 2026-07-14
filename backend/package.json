@@ -12,6 +12,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "parse:zillow": "node scripts/parse-zillow-json.js",
+    "parse:yachtworld": "node scripts/parse-yachtworld.js",
     "parse:dnr-lake": "node scripts/parse-dnr-lake.js"
   },
   "license": "ISC",

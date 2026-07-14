@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
+import useCurrentSearch from '../hooks/useCurrentSearch';
 import Card from '../components/Card';
 import SoldCompCard from '../components/SoldCompCard';
 import PageHeader from '../components/PageHeader';
@@ -16,11 +17,24 @@ import ListingPrimaryDriveTime from '../components/ListingPrimaryDriveTime';
 import ListingStaleBadge from '../components/ListingStaleBadge';
 import ListingPriceSignal from '../components/ListingPriceSignal';
 import { showError, showSuccess } from '../lib/toast';
+import { BOAT_PROPULSIONS, isBoatSearch, supportsRegions } from '../lib/assetTypes';
+
+function listingTitle(listing, boat) {
+  if (boat) {
+    const name = [listing.make, listing.model].filter(Boolean).join(' ');
+    if (name) return name;
+    if (listing.lengthFt) return `${listing.lengthFt} ft boat`;
+  }
+  return listing.address || 'Untitled listing';
+}
 
 export default function Listings() {
   const searchId = useSearchId();
   const api = useSearchAPI();
   const { canEdit } = useSearchAccess();
+  const { assetType, loading: searchLoading } = useCurrentSearch();
+  const boatMode = isBoatSearch(assetType);
+  const homeMode = supportsRegions(assetType);
   const { label: primaryPoiLabel } = usePrimaryPoi();
   const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState([]);
@@ -32,6 +46,7 @@ export default function Listings() {
 
   const regionId = searchParams.get('regionId') || '';
   const isVacantLot = searchParams.get('isVacantLot') || '';
+  const propulsion = searchParams.get('propulsion') || '';
   const status = searchParams.get('status') || '';
   const showAll = searchParams.get('showAll') === 'true';
   const needsRefresh = searchParams.get('needsRefresh') || '';
@@ -39,6 +54,15 @@ export default function Listings() {
   const sortDir = searchParams.get('sortDir') || 'desc';
 
   useEffect(() => {
+    if (searchLoading || assetType == null) {
+      return undefined;
+    }
+
+    if (!homeMode) {
+      setRegions([]);
+      return undefined;
+    }
+
     const loadRegions = async () => {
       try {
         const data = await api.regions.list();
@@ -49,15 +73,22 @@ export default function Listings() {
     };
 
     loadRegions();
-  }, [api]);
+    return undefined;
+  }, [api, homeMode, searchLoading, assetType]);
 
   useEffect(() => {
+    if (searchLoading || assetType == null) {
+      return undefined;
+    }
+
     const loadListings = async () => {
       setLoading(true);
+      setError('');
       try {
         const filters = {};
-        if (regionId) filters.regionId = regionId;
-        if (isVacantLot) filters.isVacantLot = isVacantLot;
+        if (homeMode && regionId) filters.regionId = regionId;
+        if (homeMode && isVacantLot) filters.isVacantLot = isVacantLot;
+        if (boatMode && propulsion) filters.propulsion = propulsion;
         if (status) filters.status = status;
         else if (showAll) filters.includeSold = 'true';
         if (needsRefresh) filters.needsRefresh = needsRefresh;
@@ -68,8 +99,12 @@ export default function Listings() {
         const data = await api.listings.list(filters);
         setListings(data.listings);
 
-        const staleData = await api.listings.list({ needsRefresh: 'true' });
-        setStaleCount(staleData.listings.length);
+        if (homeMode) {
+          const staleData = await api.listings.list({ needsRefresh: 'true' });
+          setStaleCount(staleData.listings.length);
+        } else {
+          setStaleCount(0);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -78,12 +113,14 @@ export default function Listings() {
     };
 
     loadListings();
-  }, [api, regionId, isVacantLot, status, showAll, needsRefresh, sortBy, sortDir]);
+    return undefined;
+  }, [api, homeMode, boatMode, searchLoading, assetType, regionId, isVacantLot, propulsion, status, showAll, needsRefresh, sortBy, sortDir]);
 
   const reloadListings = async () => {
     const filters = {};
-    if (regionId) filters.regionId = regionId;
-    if (isVacantLot) filters.isVacantLot = isVacantLot;
+    if (homeMode && regionId) filters.regionId = regionId;
+    if (homeMode && isVacantLot) filters.isVacantLot = isVacantLot;
+    if (boatMode && propulsion) filters.propulsion = propulsion;
     if (status) filters.status = status;
     else if (showAll) filters.includeSold = 'true';
     if (needsRefresh) filters.needsRefresh = needsRefresh;
@@ -93,7 +130,9 @@ export default function Listings() {
 
     const [data, staleData] = await Promise.all([
       api.listings.list(filters),
-      api.listings.list({ needsRefresh: 'true' }),
+      homeMode
+        ? api.listings.list({ needsRefresh: 'true' })
+        : Promise.resolve({ listings: [] }),
     ]);
     setListings(data.listings);
     setStaleCount(staleData.listings.length);
@@ -136,49 +175,72 @@ export default function Listings() {
   return (
     <div>
       <PageHeader
-        title="Listings"
-        description="Properties you're actively researching. Sold comps stay in pricing models but are hidden here by default."
+        title={boatMode ? 'Boats' : 'Listings'}
+        description={
+          boatMode
+            ? 'Boats you’re researching. Sold listings stay available for pricing but stay out of the main list.'
+            : 'Properties you’re researching. Sold listings stay available for pricing but stay out of the main list.'
+        }
         actions={canEdit ? (
           <>
-            {staleCount > 0 && (
+            {homeMode && staleCount > 0 && (
               <Button variant="secondary" onClick={handleBulkRefresh} disabled={refreshing}>
                 {refreshing ? 'Refreshing...' : `Refresh stale (${staleCount})`}
               </Button>
             )}
             <Link to={searchPath(searchId, '/listings/new')}>
-              <Button>Add listing</Button>
+              <Button>{boatMode ? 'Add boat' : 'Add listing'}</Button>
             </Link>
           </>
         ) : undefined}
       />
 
       <Card className="mb-6">
-        <div className="grid gap-4 md:grid-cols-5">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-pine-800">Region</label>
-            <select
-              value={regionId}
-              onChange={(e) => updateFilter('regionId', e.target.value)}
-              className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
-            >
-              <option value="">All regions</option>
-              {regions.map((region) => (
-                <option key={region.id} value={region.id}>{region.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-pine-800">Property type</label>
-            <select
-              value={isVacantLot}
-              onChange={(e) => updateFilter('isVacantLot', e.target.value)}
-              className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
-            >
-              <option value="">All types</option>
-              <option value="true">Vacant lot</option>
-              <option value="false">With home</option>
-            </select>
-          </div>
+        <div className={`grid gap-4 ${boatMode ? 'md:grid-cols-3' : 'md:grid-cols-5'}`}>
+          {homeMode && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-pine-800">Region</label>
+                <select
+                  value={regionId}
+                  onChange={(e) => updateFilter('regionId', e.target.value)}
+                  className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
+                >
+                  <option value="">All regions</option>
+                  {regions.map((region) => (
+                    <option key={region.id} value={region.id}>{region.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-pine-800">Property type</label>
+                <select
+                  value={isVacantLot}
+                  onChange={(e) => updateFilter('isVacantLot', e.target.value)}
+                  className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
+                >
+                  <option value="">All types</option>
+                  <option value="true">Vacant lot</option>
+                  <option value="false">With home</option>
+                </select>
+              </div>
+            </>
+          )}
+          {boatMode && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-pine-800">Type</label>
+              <select
+                value={propulsion}
+                onChange={(e) => updateFilter('propulsion', e.target.value)}
+                className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
+              >
+                <option value="">All boats</option>
+                {BOAT_PROPULSIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-sm font-medium text-pine-800">Status</label>
             <select
@@ -194,22 +256,24 @@ export default function Listings() {
               }}
               className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
             >
-              <option value="">Active research</option>
-              <option value="sold">Sold comps</option>
-              <option value="__all__">All statuses</option>
+              <option value="">Currently researching</option>
+              <option value="sold">Sold</option>
+              <option value="__all__">Everything</option>
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-pine-800">Freshness</label>
-            <select
-              value={needsRefresh}
-              onChange={(e) => updateFilter('needsRefresh', e.target.value)}
-              className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
-            >
-              <option value="">All listings</option>
-              <option value="true">Needs refresh</option>
-            </select>
-          </div>
+          {homeMode && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-pine-800">Freshness</label>
+              <select
+                value={needsRefresh}
+                onChange={(e) => updateFilter('needsRefresh', e.target.value)}
+                className="w-full rounded-md border border-pine-300 px-3 py-2 text-sm"
+              >
+                <option value="">All listings</option>
+                <option value="true">Needs refresh</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-sm font-medium text-pine-800">Sort by</label>
             <select
@@ -227,12 +291,23 @@ export default function Listings() {
               <option value="createdAt:asc">Oldest first</option>
               <option value="listPrice:asc">Price: low to high</option>
               <option value="listPrice:desc">Price: high to low</option>
-              <option value="pricePerAcre:asc">$/acre: low to high</option>
-              <option value="pricePerAcre:desc">$/acre: high to low</option>
-              <option value="pricePerSqft:asc">$/sqft: low to high</option>
-              <option value="pricePerSqft:desc">$/sqft: high to low</option>
-              <option value="acres:desc">Acres: largest first</option>
-              <option value="acres:asc">Acres: smallest first</option>
+              {boatMode ? (
+                <>
+                  <option value="pricePerFoot:asc">$/ft: low to high</option>
+                  <option value="pricePerFoot:desc">$/ft: high to low</option>
+                  <option value="lengthFt:desc">Length: longest first</option>
+                  <option value="lengthFt:asc">Length: shortest first</option>
+                </>
+              ) : (
+                <>
+                  <option value="pricePerAcre:asc">$/acre: low to high</option>
+                  <option value="pricePerAcre:desc">$/acre: high to low</option>
+                  <option value="pricePerSqft:asc">$/sqft: low to high</option>
+                  <option value="pricePerSqft:desc">$/sqft: high to low</option>
+                  <option value="acres:desc">Acres: largest first</option>
+                  <option value="acres:asc">Acres: smallest first</option>
+                </>
+              )}
             </select>
           </div>
         </div>
@@ -242,11 +317,13 @@ export default function Listings() {
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      {loading ? (
+      {loading || searchLoading || assetType == null ? (
         <p className="text-pine-600">Loading listings...</p>
       ) : listings.length === 0 ? (
         <Card>
-          <p className="text-sm text-pine-600">No listings match your filters.</p>
+          <p className="text-sm text-pine-600">
+            {boatMode ? 'No boats match your filters.' : 'No listings match your filters.'}
+          </p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -256,17 +333,29 @@ export default function Listings() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-lg font-medium text-pine-900">
-                      {listing.address || 'Untitled listing'}
+                      {listingTitle(listing, boatMode)}
                     </p>
-                    <ListingStaleBadge listing={listing} />
+                    {homeMode && <ListingStaleBadge listing={listing} />}
                   </div>
                   <p className="mt-1 text-sm text-pine-600">
-                    {listing.region.name}
-                    {listing.lake ? ` · ${listing.lake.name}` : ''}
+                    {boatMode
+                      ? [
+                          listing.lengthFt != null ? `${listing.lengthFt} ft` : null,
+                          listing.yearBuilt,
+                          listing.propulsion
+                            ? BOAT_PROPULSIONS.find((o) => o.value === listing.propulsion)?.label
+                            : null,
+                        ].filter(Boolean).join(' · ') || 'Boat'
+                      : [
+                          listing.region?.name,
+                          listing.lake?.name,
+                        ].filter(Boolean).join(' · ') || 'No region'}
                   </p>
                   <p className="mt-1 text-xs text-pine-500">
-                    {statusLabel(listing.status, LISTING_STATUSES)} · {listing.isVacantLot ? 'Vacant lot' : 'With home'}
-                    {listing.waterfront ? ' · Waterfront' : ''}
+                    {statusLabel(listing.status, LISTING_STATUSES)}
+                    {boatMode
+                      ? ''
+                      : ` · ${listing.isVacantLot ? 'Vacant lot' : 'With home'}${listing.waterfront ? ' · Waterfront' : ''}`}
                   </p>
                   <ListingPrimaryDriveTime
                     minutes={listing.driveTimeMinutes}
@@ -283,11 +372,20 @@ export default function Listings() {
                     )}
                   </p>
                   <ListingPriceSignal signal={listing.priceSignal} />
-                  {listing.acres && (
-                    <p className="text-sm text-pine-600">
-                      {listing.acres} acres
-                      {listing.pricePerAcre ? ` · ${formatCurrency(listing.pricePerAcre)}/acre` : ''}
-                    </p>
+                  {boatMode ? (
+                    listing.lengthFt != null && (
+                      <p className="text-sm text-pine-600">
+                        {listing.lengthFt} ft
+                        {listing.pricePerFoot ? ` · ${formatCurrency(listing.pricePerFoot)}/ft` : ''}
+                      </p>
+                    )
+                  ) : (
+                    listing.acres && (
+                      <p className="text-sm text-pine-600">
+                        {listing.acres} acres
+                        {listing.pricePerAcre ? ` · ${formatCurrency(listing.pricePerAcre)}/acre` : ''}
+                      </p>
+                    )
                   )}
                 </div>
               </div>

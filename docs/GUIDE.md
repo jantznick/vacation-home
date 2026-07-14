@@ -23,6 +23,8 @@ Single reference for setup, configuration, features, API, and testing.
 
 Private web app for tracking Wisconsin north woods vacation home research: regions, lakes, listings, comments, ML price estimates, price history, and maps.
 
+Searches can also target other vacation assets (boats first). See [MULTI_ASSET_TYPES.md](./MULTI_ASSET_TYPES.md) for the multi-asset plan, schema, UI behavior, and testing checklist.
+
 | Layer | Tech |
 |---|---|
 | Backend | Node.js, Express, Prisma, PostgreSQL |
@@ -154,12 +156,28 @@ Frontend: http://localhost:5173 (proxies `/api` to backend)
 
 1. Create a Railway project with PostgreSQL
 2. Deploy **backend** from `/backend`
-   - Start: `npm start` (runs migrations then server)
+   - Prefer **Dockerfile** builder (needed for YachtWorld URL import / Chromium) — see below
+   - Or Nixpacks/`npm start` if you only need paste import
    - Set env vars (see below)
 3. Deploy **frontend** as static site from `/frontend`
    - Build: `npm run build`
    - `VITE_API_URL` = your backend URL + `/api`
 4. Set `FRONTEND_URL` on the backend to your frontend URL
+
+### Backend Dockerfile builder (YachtWorld Chromium)
+
+If the backend Root Directory is already `backend`:
+
+1. Railway → backend service → **Settings** → **Build**
+2. **Builder** → **Dockerfile**
+3. **Dockerfile path** → `Dockerfile` (relative to the service root)
+4. Redeploy
+
+The image installs Chromium and sets `PUPPETEER_EXECUTABLE_PATH` / `PUPPETEER_SKIP_DOWNLOAD`. You do **not** need to add those env vars in Railway. Leave local debug vars (`PUPPETEER_HEADLESS=false`, etc.) unset.
+
+If the service root is the repo root instead, set Dockerfile path to `backend/Dockerfile` and make sure the build context includes `backend/` (or switch the service root to `backend`).
+
+Start command: leave empty / use the Dockerfile `CMD` (`prisma migrate deploy` then `node server.js`). Do not keep an old Nixpacks start override that conflicts with the image.
 
 ---
 
@@ -179,11 +197,14 @@ Frontend: http://localhost:5173 (proxies `/api` to backend)
 | `NODE_ENV` | No | `development` or `production` |
 | `COOKIE_DOMAIN` | No | Cross-subdomain cookies in production |
 | `JSON_BODY_LIMIT` | No | Default `10mb` (Zillow paste import) |
-| `ZILLAPI_KEY` | For URL import | ZillAPI bearer token (`zk_…`) — property + photos lookups |
+| `ZILLAPI_KEY` | For Zillow URL import | ZillAPI bearer token (`zk_…`) — property + photos lookups |
 | `ADMIN_EMAIL` | For admin page | Email of the user who can view `/admin` and ZillAPI call logs |
-| `ZILLOW_FETCH_METHOD` | No | Legacy — unused by URL import; paste parser only |
+| `ZILLOW_FETCH_METHOD` | No | Legacy — unused by Zillow URL import |
+| `PUPPETEER_EXECUTABLE_PATH` | Prod Docker | Path to Chromium (Docker image sets `/usr/bin/chromium`) |
+| `PUPPETEER_SKIP_DOWNLOAD` | Prod Docker | `true` when using system Chromium |
+| `PUPPETEER_HEADLESS` | Local debug only | Set `false` locally to watch the browser (ignored in `NODE_ENV=production`) |
 
-Puppeteer vars (`PUPPETEER_*`) only matter if debugging server-side Zillow fetch.
+YachtWorld URL import uses Puppeteer as a headless fallback when a plain fetch is blocked. Leave Puppeteer debug vars unset in production.
 
 **Local `backend/.env` example**
 

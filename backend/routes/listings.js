@@ -4,6 +4,8 @@ import {
   serializeListing,
   serializeListings,
   scrapedFieldsToListingData,
+  parseOptionalNumber,
+  parseOptionalInt,
 } from '../lib/listingHelpers.js';
 import { sortSerializedListings } from '../lib/listingAnalysis.js';
 import { createListingSnapshot } from '../lib/listingSnapshots.js';
@@ -29,6 +31,7 @@ import {
   applyBrowseListingFilter,
   BROWSE_EXCLUDED_STATUSES,
 } from '../lib/listingBrowse.js';
+import { normalizePropulsion, supportsRegions } from '../lib/assetTypes.js';
 
 const router = express.Router();
 
@@ -51,6 +54,9 @@ function buildListingWhere(searchId, query) {
   }
   if (query.waterfront !== undefined) {
     where.waterfront = query.waterfront === 'true';
+  }
+  if (query.propulsion) {
+    where.propulsion = query.propulsion;
   }
 
   if (query.needsRefresh === 'true') {
@@ -81,6 +87,27 @@ async function validateRegionAndLake(searchId, regionId, lakeId) {
   }
 
   return { region };
+}
+
+function boatFieldsFromBody(fields, { forCreate = false } = {}) {
+  const data = {};
+
+  if (fields.lengthFt !== undefined || forCreate) {
+    data.lengthFt = parseOptionalNumber(fields.lengthFt);
+  }
+  if (fields.make !== undefined || forCreate) {
+    data.make = fields.make?.trim?.() ? fields.make.trim() : (fields.make ?? null);
+  }
+  if (fields.model !== undefined || forCreate) {
+    data.model = fields.model?.trim?.() ? fields.model.trim() : (fields.model ?? null);
+  }
+  if (fields.propulsion !== undefined) {
+    data.propulsion = normalizePropulsion(fields.propulsion, { fallback: null });
+  } else if (forCreate) {
+    data.propulsion = 'sail';
+  }
+
+  return data;
 }
 
 router.get('/', async (req, res) => {
@@ -274,14 +301,24 @@ router.post('/', async (req, res) => {
     const { regionId, lakeId, rawScrapedData, fetchFromSource, ...fields } = req.body;
 
     const searchId = searchIdFrom(req);
+    const assetType = req.search?.assetType || 'home';
+    const homeSearch = supportsRegions(assetType);
 
-    if (!regionId) {
-      return res.status(400).json({ error: 'regionId is required' });
-    }
+    let resolvedRegionId = regionId || null;
+    let resolvedLakeId = lakeId ?? null;
 
-    const validation = await validateRegionAndLake(searchId, regionId, lakeId);
-    if (validation.error) {
-      return res.status(validation.status).json({ error: validation.error });
+    if (homeSearch) {
+      if (!resolvedRegionId) {
+        return res.status(400).json({ error: 'regionId is required' });
+      }
+
+      const validation = await validateRegionAndLake(searchId, resolvedRegionId, resolvedLakeId);
+      if (validation.error) {
+        return res.status(validation.status).json({ error: validation.error });
+      }
+    } else {
+      resolvedRegionId = null;
+      resolvedLakeId = null;
     }
 
     let scrapedData = {};
@@ -296,32 +333,50 @@ router.post('/', async (req, res) => {
       scrapedData.fetchedAt = new Date();
     }
 
+    const boatData = homeSearch
+      ? {}
+      : {
+          lengthFt: fields.lengthFt != null && fields.lengthFt !== ''
+            ? parseOptionalNumber(fields.lengthFt)
+            : (scrapedData.lengthFt ?? null),
+          make: fields.make?.trim?.()
+            ? fields.make.trim()
+            : (scrapedData.make ?? null),
+          model: fields.model?.trim?.()
+            ? fields.model.trim()
+            : (scrapedData.model ?? null),
+          propulsion: fields.propulsion
+            ? normalizePropulsion(fields.propulsion)
+            : (scrapedData.propulsion || 'sail'),
+        };
+
     let listing = await prisma.listing.create({
       data: {
         searchId,
-        regionId,
-        lakeId: lakeId ?? null,
+        regionId: resolvedRegionId,
+        lakeId: resolvedLakeId,
         sourceUrl: fields.sourceUrl ?? scrapedData.sourceUrl ?? null,
         sourceSite: fields.sourceSite ?? scrapedData.sourceSite ?? null,
         mlsNumber: fields.mlsNumber ?? scrapedData.mlsNumber ?? null,
         status: fields.status ?? scrapedData.status ?? undefined,
         address: fields.address ?? scrapedData.address ?? null,
         city: fields.city ?? scrapedData.city ?? null,
-        state: fields.state ?? scrapedData.state ?? 'WI',
+        state: fields.state ?? scrapedData.state ?? (homeSearch ? 'WI' : null),
         zip: fields.zip ?? scrapedData.zip ?? null,
         latitude: parseCoordinate(fields.latitude ?? scrapedData.latitude),
         longitude: parseCoordinate(fields.longitude ?? scrapedData.longitude),
         listPrice: fields.listPrice ?? scrapedData.listPrice ?? null,
         soldPrice: fields.soldPrice ?? scrapedData.soldPrice ?? null,
-        isVacantLot: fields.isVacantLot ?? scrapedData.isVacantLot ?? false,
-        bedrooms: fields.bedrooms ?? scrapedData.bedrooms ?? null,
-        bathrooms: fields.bathrooms ?? scrapedData.bathrooms ?? null,
-        sqftLiving: fields.sqftLiving ?? scrapedData.sqftLiving ?? null,
-        sqftLot: fields.sqftLot ?? scrapedData.sqftLot ?? null,
-        acres: fields.acres ?? scrapedData.acres ?? null,
+        isVacantLot: homeSearch ? (fields.isVacantLot ?? scrapedData.isVacantLot ?? false) : false,
+        bedrooms: homeSearch ? (fields.bedrooms ?? scrapedData.bedrooms ?? null) : null,
+        bathrooms: homeSearch ? (fields.bathrooms ?? scrapedData.bathrooms ?? null) : null,
+        sqftLiving: homeSearch ? (fields.sqftLiving ?? scrapedData.sqftLiving ?? null) : null,
+        sqftLot: homeSearch ? (fields.sqftLot ?? scrapedData.sqftLot ?? null) : null,
+        acres: homeSearch ? (fields.acres ?? scrapedData.acres ?? null) : null,
         yearBuilt: fields.yearBuilt ?? scrapedData.yearBuilt ?? null,
-        waterfront: fields.waterfront ?? scrapedData.waterfront ?? false,
-        waterfrontType: fields.waterfrontType ?? scrapedData.waterfrontType ?? null,
+        waterfront: homeSearch ? (fields.waterfront ?? scrapedData.waterfront ?? false) : false,
+        waterfrontType: homeSearch ? (fields.waterfrontType ?? scrapedData.waterfrontType ?? null) : null,
+        ...boatData,
         pros: fields.pros ?? null,
         cons: fields.cons ?? null,
         notes: fields.notes ?? null,
@@ -368,8 +423,24 @@ router.patch('/:id', async (req, res) => {
 
     const { regionId, lakeId, listingDate, rawScrapedData, fetchFromSource, ...fields } = req.body;
     const data = { ...fields };
+    const assetType = req.search?.assetType || 'home';
+    const homeSearch = supportsRegions(assetType);
 
-    if (regionId !== undefined) {
+    // Strip boat keys from generic spread; apply explicitly below.
+    delete data.lengthFt;
+    delete data.make;
+    delete data.model;
+    delete data.propulsion;
+
+    if (!homeSearch) {
+      Object.assign(data, boatFieldsFromBody(fields));
+      if (regionId !== undefined) {
+        data.regionId = null;
+      }
+      if (lakeId !== undefined) {
+        data.lakeId = null;
+      }
+    } else if (regionId !== undefined) {
       const validation = await validateRegionAndLake(searchId, regionId, lakeId ?? existing.lakeId);
       if (validation.error) {
         return res.status(validation.status).json({ error: validation.error });
@@ -377,7 +448,7 @@ router.patch('/:id', async (req, res) => {
       data.regionId = regionId;
     }
 
-    if (lakeId !== undefined) {
+    if (homeSearch && lakeId !== undefined) {
       if (lakeId === null) {
         data.lakeId = null;
       } else {

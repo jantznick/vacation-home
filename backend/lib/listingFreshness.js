@@ -1,19 +1,30 @@
 export const STALE_LISTING_DAYS = 30;
 
-function isZillowSourceUrl(sourceUrl) {
+function hostnameOf(sourceUrl) {
   if (!sourceUrl) {
-    return false;
+    return null;
   }
   try {
-    const { hostname } = new URL(sourceUrl);
-    return hostname === 'zillow.com' || hostname === 'www.zillow.com';
+    return new URL(sourceUrl).hostname;
   } catch {
-    return false;
+    return null;
   }
 }
 
+function isRefreshableSourceUrl(sourceUrl) {
+  const hostname = hostnameOf(sourceUrl);
+  if (!hostname) {
+    return false;
+  }
+  return hostname === 'zillow.com'
+    || hostname === 'www.zillow.com'
+    || hostname === 'yachtworld.com'
+    || hostname === 'www.yachtworld.com'
+    || hostname.endsWith('.yachtworld.com');
+}
+
 export function getListingFreshness(listing) {
-  const canRefresh = isZillowSourceUrl(listing.sourceUrl);
+  const canRefresh = isRefreshableSourceUrl(listing.sourceUrl);
 
   if (!canRefresh) {
     return {

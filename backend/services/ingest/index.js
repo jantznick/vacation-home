@@ -4,8 +4,20 @@ import {
   importDnrLakeFromWbic,
   parseWbicFromUrl,
 } from './wiDnrLake.js';
-import { detectSourceSite, parseZillowFromPaste } from './zillow.js';
+import { detectSourceSite as detectZillowSite, parseZillowFromPaste } from './zillow.js';
 import { fetchListingFromZillapi, isZillapiConfigured } from './zillapi.js';
+import {
+  fetchListingFromYachtWorld,
+  isYachtWorldUrl,
+  parseYachtWorldFromPaste,
+} from './yachtworld.js';
+
+export function detectSourceSite(urlString) {
+  if (isYachtWorldUrl(urlString)) {
+    return 'yachtworld';
+  }
+  return detectZillowSite(urlString);
+}
 
 export async function previewListingFromUrl(urlString, context = {}) {
   if (!urlString?.trim()) {
@@ -14,7 +26,11 @@ export async function previewListingFromUrl(urlString, context = {}) {
 
   const sourceSite = detectSourceSite(urlString);
   if (!sourceSite) {
-    throw new Error('Unsupported listing site. Only Zillow URLs are supported for now.');
+    throw new Error('Unsupported listing link. Use a Zillow or YachtWorld URL.');
+  }
+
+  if (sourceSite === 'yachtworld') {
+    return fetchListingFromYachtWorld(urlString);
   }
 
   if (!isZillapiConfigured()) {
@@ -25,17 +41,21 @@ export async function previewListingFromUrl(urlString, context = {}) {
     return fetchListingFromZillapi(urlString, context);
   }
 
-  throw new Error('Unsupported listing site');
+  throw new Error('Unsupported listing link');
 }
 
 export function previewListingFromPaste({ sourceUrl, pastedData }) {
   if (!sourceUrl?.trim()) {
-    throw new Error('Zillow listing URL is required');
+    throw new Error('Listing URL is required');
   }
 
   const sourceSite = detectSourceSite(sourceUrl);
   if (!sourceSite) {
-    throw new Error('Unsupported listing site. Only Zillow URLs are supported for now.');
+    throw new Error('Unsupported listing link. Use a Zillow or YachtWorld URL.');
+  }
+
+  if (sourceSite === 'yachtworld') {
+    return parseYachtWorldFromPaste({ sourceUrl, pastedData });
   }
 
   return parseZillowFromPaste({ sourceUrl, pastedData });

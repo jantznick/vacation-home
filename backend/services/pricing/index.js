@@ -8,6 +8,7 @@ import {
   PRICING_FEATURE_KEYS,
   PRICING_ALGORITHMS,
   DEFAULT_PRICING_FEATURES,
+  defaultPricingFeaturesForAssetType,
   DEFAULT_PRICING_ALGORITHM,
   PRICING_TRAINING_PIPELINE_VERSION,
   buildTrainingMatrix,
@@ -21,6 +22,7 @@ import {
   validateFeatureKeys,
   vectorizeListing,
 } from '../../lib/pricingFeatures.js';
+import { supportsRegions } from '../../lib/assetTypes.js';
 
 const MIN_TRAINING_SAMPLES = 3;
 
@@ -500,12 +502,22 @@ export async function ensureDefaultPricingModel(searchId) {
     return prisma.pricingModel.findUnique({ where: { id: anyModel.id } });
   }
 
+  const search = await prisma.search.findUnique({
+    where: { id: searchId },
+    select: { assetType: true },
+  });
+  const assetType = search?.assetType || 'home';
+  const features = defaultPricingFeaturesForAssetType(assetType);
+  const isBoat = assetType === 'boat';
+
   return prisma.pricingModel.create({
     data: {
       searchId,
       name: 'Default',
-      description: 'Built-in north woods feature set (lot, house, beds/baths, waterfront, region)',
-      features: DEFAULT_PRICING_FEATURES,
+      description: isBoat
+        ? 'Built-in boat feature set (length, year built)'
+        : 'Built-in north woods feature set (lot, house, beds/baths, waterfront, region)',
+      features,
       algorithm: DEFAULT_PRICING_ALGORITHM,
       isDefault: true,
     },
@@ -697,16 +709,18 @@ export async function retrainAfterListingChange({
   };
 }
 
-export function getFeatureCatalog() {
-  const defaultSet = new Set(DEFAULT_PRICING_FEATURES);
+export function getFeatureCatalog(assetType = 'home') {
+  const defaults = defaultPricingFeaturesForAssetType(assetType);
+  const defaultSet = new Set(defaults);
   const orderedKeys = [
-    ...DEFAULT_PRICING_FEATURES,
+    ...defaults,
     ...PRICING_FEATURE_KEYS.filter((key) => !defaultSet.has(key)),
   ];
 
   return {
     ...getAlgorithmCatalog(),
-    defaultFeatures: DEFAULT_PRICING_FEATURES,
+    assetType,
+    defaultFeatures: defaults,
     features: orderedKeys.map((key) => PRICING_FEATURE_CATALOG[key]),
   };
 }
@@ -1005,14 +1019,25 @@ function buildSyntheticListing(searchId, region, spec) {
     bedrooms: vacant ? null : (spec.bedrooms ?? null),
     bathrooms: vacant ? null : (spec.bathrooms ?? null),
     waterfront: spec.waterfront == null ? null : Boolean(spec.waterfront),
-    yearBuilt: vacant ? null : (spec.yearBuilt ?? null),
+    yearBuilt: vacant && spec.yearBuilt == null ? null : (spec.yearBuilt ?? null),
     daysOnMarket: spec.daysOnMarket ?? null,
+    lengthFt: spec.lengthFt ?? null,
+    propulsion: spec.propulsion ?? null,
+    make: spec.make ?? null,
+    model: spec.model ?? null,
     region: region ? { id: region.id, name: region.name } : null,
   });
 }
 
 export async function predictFromSpec(searchId, spec, modelId = null) {
-  const anyRegion = isAnyRegionSpec(spec);
+  const search = await prisma.search.findUnique({
+    where: { id: searchId },
+    select: { assetType: true },
+  });
+  const assetType = search?.assetType || 'home';
+  const homeSearch = supportsRegions(assetType);
+
+  const anyRegion = homeSearch ? isAnyRegionSpec(spec) : true;
   const regionId = anyRegion ? null : spec?.regionId;
 
   let region = null;
@@ -1033,7 +1058,7 @@ export async function predictFromSpec(searchId, spec, modelId = null) {
   await ensureDefaultPricingModel(searchId);
 
   const { model, features: modelFeatures, algorithm } = await resolveModelConfig(modelId, searchId);
-  const features = featuresForDreamMode(modelFeatures, anyRegion);
+  const features = featuresForDreamMode(modelFeatures, anyRegion || !homeSearch);
   const syntheticListing = buildSyntheticListing(searchId, region, spec);
   const target = syntheticListing;
 
@@ -1044,20 +1069,30 @@ export async function predictFromSpec(searchId, spec, modelId = null) {
   const priced = pricedListings(allListings);
   const serialized = allListings.map(normalizeListingForPricing);
 
-  const compOptions = { requireSameRegion: !anyRegion };
+  const compOptions = {
+    requireSameRegion: homeSearch && !anyRegion,
+    assetType,
+  };
   const similarCompListings = findComps(target, serialized, compOptions);
   const similarPool = priced.filter((item) =>
     similarCompListings.some((comp) => comp.id === item.id),
   );
 
-  const similarCriteria = compCriteriaDescription(target, { includeRegion: !anyRegion });
-  const similarTitle = anyRegion ? 'Similar properties' : 'Similar listings';
+  const similarCriteria = compCriteriaDescription(target, {
+    includeRegion: homeSearch && !anyRegion,
+    assetType,
+  });
+  const similarTitle = anyRegion || !homeSearch
+    ? (homeSearch ? 'Similar properties' : 'Similar boats')
+    : 'Similar listings';
 
   const tiers = {
     allListings: {
-      title: 'All listings',
+      title: homeSearch ? 'All listings' : 'All boats',
       ...predictFromPool(syntheticListing, priced, features, {
-        criteria: 'all listings you\'ve saved',
+        criteria: homeSearch
+          ? 'all listings you\'ve saved'
+          : 'all boats you\'ve saved',
         emptyMessage: `Need at least ${MIN_TRAINING_SAMPLES} listings with list prices.`,
         algorithm,
       }),
@@ -1072,7 +1107,7 @@ export async function predictFromSpec(searchId, spec, modelId = null) {
     },
   };
 
-  if (!anyRegion) {
+  if (!anyRegion && homeSearch) {
     const regionPool = priced.filter((item) => item.regionId === regionId);
     tiers.region = {
       title: `All in ${region.name}`,
@@ -1084,11 +1119,11 @@ export async function predictFromSpec(searchId, spec, modelId = null) {
     };
   }
 
-  const visibleTiers = anyRegion
+  const visibleTiers = anyRegion || !homeSearch
     ? ['allListings', 'similar']
     : ['allListings', 'region', 'similar'];
 
-  const recommendedTier = anyRegion
+  const recommendedTier = anyRegion || !homeSearch
     ? (tiers.similar.estimatedPrice != null
       ? 'similar'
       : tiers.allListings.estimatedPrice != null
@@ -1102,7 +1137,7 @@ export async function predictFromSpec(searchId, spec, modelId = null) {
           ? 'allListings'
           : null);
 
-  const prediction = anyRegion
+  const prediction = anyRegion || !homeSearch
     ? (tiers.similar.estimatedPrice != null
       ? tiers.similar
       : tiers.allListings.estimatedPrice != null
@@ -1117,7 +1152,7 @@ export async function predictFromSpec(searchId, spec, modelId = null) {
           : null);
 
   return {
-    mode: anyRegion ? 'anyRegion' : 'regional',
+    mode: anyRegion || !homeSearch ? 'anyRegion' : 'regional',
     visibleTiers,
     model: model
       ? {
@@ -1143,7 +1178,7 @@ function pricePickerVariableType(featureKey) {
   if (featureKey === 'region') {
     return 'region';
   }
-  if (featureKey === 'isVacantLot' || featureKey === 'waterfront') {
+  if (featureKey === 'isVacantLot' || featureKey === 'waterfront' || featureKey === 'isSail') {
     return 'boolean';
   }
   return 'numeric';
@@ -1177,8 +1212,8 @@ function computeProfileDefaultsAndRanges(normalizedListings, features) {
       continue;
     }
 
-    if (featureKey === 'isVacantLot' || featureKey === 'waterfront') {
-      defaults[featureKey] = false;
+    if (featureKey === 'isVacantLot' || featureKey === 'waterfront' || featureKey === 'isSail') {
+      defaults[featureKey] = featureKey === 'isSail';
       continue;
     }
 
@@ -1255,6 +1290,7 @@ function mergePickerSpec(spec, defaults, regions, anyFeatures = []) {
   const merged = {
     isVacantLot: anySet.has('isVacantLot') ? null : resolve('isVacantLot', false),
     waterfront: anySet.has('waterfront') ? null : resolve('waterfront', false),
+    isSail: anySet.has('isSail') ? null : resolve('isSail', true),
     acres: resolve('acres'),
     sqftLiving: resolve('sqftLiving'),
     bedrooms: resolve('bedrooms'),
@@ -1262,10 +1298,16 @@ function mergePickerSpec(spec, defaults, regions, anyFeatures = []) {
     sqftLot: resolve('sqftLot'),
     yearBuilt: resolve('yearBuilt'),
     daysOnMarket: resolve('daysOnMarket'),
+    lengthFt: resolve('lengthFt'),
+    propulsion: resolve('propulsion'),
     regionIds,
     regionId: focusedRegionId,
     focusedRegionId,
   };
+
+  if (merged.isSail != null) {
+    merged.propulsion = merged.isSail ? 'sail' : 'motor';
+  }
 
   if (merged.isVacantLot === true) {
     merged.sqftLiving = null;
@@ -1301,6 +1343,13 @@ function applyPickerVariable(spec, variable, value) {
     case 'daysOnMarket':
       next.daysOnMarket = value;
       break;
+    case 'lengthFt':
+      next.lengthFt = value;
+      break;
+    case 'isSail':
+      next.isSail = Boolean(value);
+      next.propulsion = next.isSail ? 'sail' : 'motor';
+      break;
     case 'waterfront':
       next.waterfront = Boolean(value);
       break;
@@ -1331,12 +1380,16 @@ function formatPickerValue(featureKey, value, regionsById) {
     return regionsById.get(value)?.name ?? 'Unknown region';
   }
 
-  if (featureKey === 'isVacantLot' || featureKey === 'waterfront') {
+  if (featureKey === 'isVacantLot' || featureKey === 'waterfront' || featureKey === 'isSail') {
     return value ? 'Yes' : 'No';
   }
 
   if (featureKey === 'acres') {
     return `${value} acres`;
+  }
+
+  if (featureKey === 'lengthFt') {
+    return `${value} ft`;
   }
 
   if (featureKey === 'sqftLiving' || featureKey === 'sqftLot') {
@@ -1555,14 +1608,19 @@ function buildPickerSeries({
   }
 
   const series = [];
+  const regionIdsForSweep = selectedRegionIds.length ? selectedRegionIds : [null];
 
-  for (const regionId of selectedRegionIds) {
-    const region = regionsById.get(regionId);
-    if (!region) {
+  for (const regionId of regionIdsForSweep) {
+    const region = regionId ? regionsById.get(regionId) : null;
+    if (regionId && !region) {
       continue;
     }
 
-    const regionSpec = { ...spec, regionId, focusedRegionId: regionId };
+    const regionSpec = {
+      ...spec,
+      regionId: regionId ?? null,
+      focusedRegionId: regionId ?? null,
+    };
     const points = buildSweepPoints({
       segment,
       searchId,
@@ -1578,13 +1636,13 @@ function buildPickerSeries({
     if (points.length) {
       series.push({
         regionId,
-        regionName: region.name,
+        regionName: region?.name ?? 'All listings',
         points,
       });
     }
   }
 
-  const focusedId = spec.focusedRegionId || selectedRegionIds[0];
+  const focusedId = spec.focusedRegionId || selectedRegionIds[0] || null;
   const focusedSeries = series.find((item) => item.regionId === focusedId) || series[0];
 
   return {

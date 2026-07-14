@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSearchAPI, useSearchId, searchPath } from '../hooks/useSearch';
+import useCurrentSearch from '../hooks/useCurrentSearch';
 import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import SensitivityChart, { interpolateCurvePrice } from '../components/SensitivityChart';
@@ -8,6 +9,7 @@ import PricePickerVariablePills from '../components/PricePickerVariablePills';
 import PricePickerRegionCheckboxes from '../components/PricePickerRegionCheckboxes';
 import CollapsiblePanel from '../components/CollapsiblePanel';
 import { formatDisplayPrice } from '../lib/pricingDisplay';
+import { isBoatSearch, supportsRegions } from '../lib/assetTypes';
 
 const inputClass = 'w-full rounded-md border border-pine-300 px-3 py-2 text-sm';
 
@@ -15,7 +17,9 @@ const PROFILE_FIELDS = [
   { key: 'regionId', label: 'Region', type: 'region' },
   { key: 'isVacantLot', label: 'Vacant lot', type: 'boolean' },
   { key: 'waterfront', label: 'Waterfront', type: 'boolean' },
+  { key: 'isSail', label: 'Sailboat', type: 'boolean' },
   { key: 'acres', label: 'Acres', type: 'numeric', step: '0.01' },
+  { key: 'lengthFt', label: 'Length (ft)', type: 'numeric', step: '0.1' },
   { key: 'sqftLiving', label: 'Living area (sq ft)', type: 'numeric' },
   { key: 'bedrooms', label: 'Bedrooms', type: 'numeric', step: '0.5' },
   { key: 'bathrooms', label: 'Bathrooms', type: 'numeric', step: '0.5' },
@@ -80,8 +84,11 @@ function PinAnyToggle({ mode, onChange, disabled }) {
 export default function PricePicker() {
   const api = useSearchAPI();
   const searchId = useSearchId();
+  const { assetType, loading: searchLoading } = useCurrentSearch();
+  const boatMode = isBoatSearch(assetType);
+  const homeMode = supportsRegions(assetType);
   const [regions, setRegions] = useState([]);
-  const [activeVariable, setActiveVariable] = useState('acres');
+  const [activeVariable, setActiveVariable] = useState(boatMode ? 'lengthFt' : 'acres');
   const [spec, setSpec] = useState(null);
   const [anyFeatures, setAnyFeatures] = useState([]);
   const [focusedRegionId, setFocusedRegionId] = useState(null);
@@ -115,9 +122,16 @@ export default function PricePicker() {
   }, [api]);
 
   useEffect(() => {
-    api.regions.list().then((data) => setRegions(data.regions)).catch(() => {});
-    loadCurve({}, 'acres', []);
-  }, [api, loadCurve]);
+    if (searchLoading) return;
+    const initialVariable = boatMode ? 'lengthFt' : 'acres';
+    setActiveVariable(initialVariable);
+    if (homeMode) {
+      api.regions.list().then((data) => setRegions(data.regions)).catch(() => {});
+    } else {
+      setRegions([]);
+    }
+    loadCurve({}, initialVariable, []);
+  }, [api, loadCurve, boatMode, homeMode, searchLoading]);
 
   const anyFeatureSet = useMemo(() => new Set(anyFeatures), [anyFeatures]);
 
@@ -341,7 +355,11 @@ export default function PricePicker() {
     <div>
       <PageHeader
         title="Price picker"
-        description="Explore how estimated price changes along one variable at a time, using your saved listings model."
+        description={
+          boatMode
+            ? 'See how price changes with length or year based on boats you’ve saved.'
+            : 'Explore how estimated price changes along one variable at a time, using the listings you’ve saved.'
+        }
       />
 
       {error && (
@@ -369,6 +387,9 @@ export default function PricePicker() {
               const controlsDisabled = isActive || loading || !spec;
 
               if (field.type === 'region') {
+                if (!homeMode || regions.length === 0) {
+                  return null;
+                }
                 const regionDisabled = isActive || loading;
                 return (
                   <div key={field.key}>

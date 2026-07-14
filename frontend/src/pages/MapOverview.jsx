@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
+import useCurrentSearch from '../hooks/useCurrentSearch';
 import Card from '../components/Card';
 import MapPanel, {
   buildListingMarker,
@@ -9,10 +10,14 @@ import MapPanel, {
 } from '../components/MapPanel';
 import PageHeader from '../components/PageHeader';
 import { formatNumber, formatDriveTime } from '../lib/format';
+import { isBoatSearch, supportsRegions } from '../lib/assetTypes';
 
 export default function MapOverview() {
   const searchId = useSearchId();
   const api = useSearchAPI();
+  const { assetType } = useCurrentSearch();
+  const boatMode = isBoatSearch(assetType);
+  const homeMode = supportsRegions(assetType);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,16 +44,18 @@ export default function MapOverview() {
       .map((poi) => buildPoiMarker(poi, searchId))
       .filter(Boolean);
 
-    const regionMarkers = (data.regions || [])
-      .map((region) => buildRegionMarker(region, searchId))
-      .filter(Boolean);
+    const regionMarkers = homeMode
+      ? (data.regions || [])
+        .map((region) => buildRegionMarker(region, searchId))
+        .filter(Boolean)
+      : [];
 
     const listingMarkers = (data.listings || [])
       .map((listing) => buildListingMarker(listing, searchId))
       .filter(Boolean);
 
     return [...poiMarkers, ...regionMarkers, ...listingMarkers];
-  }, [data, searchId]);
+  }, [data, searchId, homeMode]);
 
   if (loading) {
     return <p className="text-pine-600">Loading map...</p>;
@@ -58,7 +65,11 @@ export default function MapOverview() {
     <div>
       <PageHeader
         title="Map"
-        description="Your locations, regions, and listings that have a map pin."
+        description={
+          boatMode
+            ? 'Your locations and boats that have a map pin.'
+            : 'Your locations, regions, and listings that have a map pin.'
+        }
       />
 
       {error && (
@@ -71,53 +82,67 @@ export default function MapOverview() {
             <span className="inline-block h-3 w-3 rounded-full bg-[#166534]" />
             Location
           </span>
-          <span className="flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded-full bg-[#2563eb]" />
-            Region
-          </span>
+          {homeMode && (
+            <span className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full bg-[#2563eb]" />
+              Region
+            </span>
+          )}
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-3 rounded-full bg-[#ea580c]" />
-            Listing
+            {boatMode ? 'Boat' : 'Listing'}
           </span>
         </div>
 
         <MapPanel
           markers={markers}
-          emptyMessage="Add locations in Settings, then set a center on regions or an address on listings."
+          emptyMessage={
+            boatMode
+              ? 'Add a location in Settings, then add a city or address on a boat to plot it.'
+              : 'Add locations in Settings, then set a center on regions or an address on listings.'
+          }
         />
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="text-lg font-medium text-pine-900">Regions on map</h2>
-          {data?.regions?.length ? (
-            <ul className="mt-4 space-y-2 text-sm">
-              {data.regions.map((region) => (
-                <li key={region.id} className="flex items-center justify-between gap-3">
-                  <Link to={searchPath(searchId, `/regions/${region.id}`)} className="font-medium text-pine-800 hover:text-pine-950">
-                    {region.name}
-                  </Link>
-                  {region.driveTimeMinutes != null && (
-                    <span className="text-pine-500">{formatDriveTime(region.driveTimeMinutes)}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 text-sm text-pine-600">
-              No regions on the map yet. Add a center location when editing a region.
-            </p>
-          )}
-        </Card>
+      <div className={`grid gap-6 ${homeMode ? 'lg:grid-cols-2' : ''}`}>
+        {homeMode && (
+          <Card>
+            <h2 className="text-lg font-medium text-pine-900">Regions on map</h2>
+            {data?.regions?.length ? (
+              <ul className="mt-4 space-y-2 text-sm">
+                {data.regions.map((region) => (
+                  <li key={region.id} className="flex items-center justify-between gap-3">
+                    <Link to={searchPath(searchId, `/regions/${region.id}`)} className="font-medium text-pine-800 hover:text-pine-950">
+                      {region.name}
+                    </Link>
+                    {region.driveTimeMinutes != null && (
+                      <span className="text-pine-500">{formatDriveTime(region.driveTimeMinutes)}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-pine-600">
+                No regions on the map yet. Add a center location when editing a region.
+              </p>
+            )}
+          </Card>
+        )}
 
         <Card>
-          <h2 className="text-lg font-medium text-pine-900">Listings on map</h2>
+          <h2 className="text-lg font-medium text-pine-900">
+            {boatMode ? 'Boats on map' : 'Listings on map'}
+          </h2>
           {data?.listings?.length ? (
             <ul className="mt-4 space-y-2 text-sm">
               {data.listings.map((listing) => (
                 <li key={listing.id} className="flex items-center justify-between gap-3">
                   <Link to={searchPath(searchId, `/listings/${listing.id}`)} className="font-medium text-pine-800 hover:text-pine-950">
-                    {listing.address || 'Untitled listing'}
+                    {boatMode
+                      ? ([listing.make, listing.model].filter(Boolean).join(' ')
+                        || listing.address
+                        || 'Untitled boat')
+                      : (listing.address || 'Untitled listing')}
                   </Link>
                   {listing.driveTimeMinutes != null && (
                     <span className="text-pine-500">{formatDriveTime(listing.driveTimeMinutes)}</span>
@@ -127,7 +152,9 @@ export default function MapOverview() {
             </ul>
           ) : (
             <p className="mt-3 text-sm text-pine-600">
-              No listings on the map yet. Add an address or look up the location on a listing.
+              {boatMode
+                ? 'No boats on the map yet. Add a city or address when editing a boat.'
+                : 'No listings on the map yet. Add an address or look up the location on a listing.'}
             </p>
           )}
         </Card>

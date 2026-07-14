@@ -17,17 +17,21 @@ const PRICING_LENSES_STATIC = [
     title: 'All listings',
     description:
       'What does your whole pipeline say this property should cost? Useful when you are still exploring widely.',
+    boatDescription:
+      'What does your whole saved fleet say this boat should cost? Useful when you are still shopping widely.',
   },
   {
     key: 'region',
     title: 'Same region',
+    boatTitle: 'Same market',
     getDescription: (s) => s.pricingLensRegion,
   },
   {
     key: 'similar',
     title: 'Similar homes',
-    description:
-      'A comp-style view matched on size, location, and property type from listings you have already saved.',
+    boatTitleKey: 'pricingLensSimilarTitle',
+    getDescription: (s) => s.pricingLensSimilar
+      || 'A comp-style view matched on size, location, and property type from listings you have already saved.',
   },
 ];
 
@@ -43,13 +47,18 @@ export default function Home() {
   const [scenarioId, setScenarioId] = useState(() => getStoredScenarioId() || DEFAULT_SCENARIO_ID);
   const scenario = MARKETING_SCENARIOS[scenarioId] || MARKETING_SCENARIOS[DEFAULT_SCENARIO_ID];
   const theme = scenario.theme;
+  const isBoat = Boolean(scenario.isBoat);
   const heroBody = scenario.heroBody
     .replace('{appName}', APP_NAME)
     .replace('{listingType}', scenario.listingType);
 
   const pricingLenses = PRICING_LENSES_STATIC.map((lens) => ({
-    title: lens.title,
-    description: lens.getDescription ? lens.getDescription(scenario) : lens.description,
+    title: isBoat
+      ? (lens.boatTitle || scenario[lens.boatTitleKey] || lens.title)
+      : lens.title,
+    description: isBoat && lens.boatDescription
+      ? lens.boatDescription
+      : (lens.getDescription ? lens.getDescription(scenario) : lens.description),
   }));
 
   return (
@@ -122,11 +131,15 @@ export default function Home() {
               Explore before you save listings
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-pine-950 sm:text-4xl">
-              See how price moves — and how regions compare
+              {scenario.pricePickerTitle || 'See how price moves — and how regions compare'}
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-pine-600">
-              Price picker holds your dream property steady while you slide one detail at a time.
-              With multiple regions selected, <strong className="font-medium text-pine-800">steeper lines mean that variable matters more there</strong> — the same acre or waterfront flag can mean something different in Eagle River vs Minocqua, Destin vs 30A, or Breckenridge vs Keystone.
+              {scenario.pricePickerLead || (
+                <>
+                  Price picker holds your dream property steady while you slide one detail at a time.
+                  With multiple regions selected, <strong className="font-medium text-pine-800">steeper lines mean that variable matters more there</strong> — the same acre or waterfront flag can mean something different in Eagle River vs Minocqua, Destin vs 30A, or Breckenridge vs Keystone.
+                </>
+              )}
               {' '}{scenario.pricePickerBlurb}
             </p>
           </div>
@@ -165,9 +178,19 @@ export default function Home() {
               Pricing models that learn from your {scenario.label.toLowerCase()} search
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-white/80">
-              Zillow&apos;s Zestimate uses their black box. We use{' '}
-              <strong className="font-medium text-white">ML models trained on the listings you save</strong>
-              — retrained automatically as your dataset grows — to answer one question on every property:
+              {isBoat ? (
+                <>
+                  Generic online estimates use a black box. We use{' '}
+                  <strong className="font-medium text-white">ML models trained on the boats you save</strong>
+                  — retrained automatically as your fleet grows — to answer one question on every listing:
+                </>
+              ) : (
+                <>
+                  Zillow&apos;s Zestimate uses their black box. We use{' '}
+                  <strong className="font-medium text-white">ML models trained on the listings you save</strong>
+                  — retrained automatically as your dataset grows — to answer one question on every property:
+                </>
+              )}
             </p>
             <p className="mt-3 text-xl font-medium text-white">
               &ldquo;Is this a good price?&rdquo;
@@ -214,8 +237,8 @@ export default function Home() {
               <p className={`text-sm font-medium ${theme.pricingHighlight}`}>Why this matters</p>
               <p className="mt-4 leading-relaxed text-white/90">{scenario.pricingInsight}</p>
               <p className="mt-4 leading-relaxed text-white/90">
-                As you paste listings over weeks or years, {APP_NAME} builds a private comp library from
-                the homes you save — and tells you when ask prices in your markets look high or like a
+                As you save listings over weeks or years, {APP_NAME} builds a private comp library from
+                the {isBoat ? 'boats' : 'homes'} you track — and tells you when ask prices in your markets look high or like a
                 genuine opportunity.
               </p>
               <p className="mt-6 text-sm text-white/50">
@@ -291,7 +314,7 @@ export default function Home() {
               {scenario.ctaHeadline}
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-white/80">
-              Create a free account, paste your first {scenario.label.toLowerCase()} listings, and see
+              Create a free account, {isBoat ? 'import your first boats' : `paste your first ${scenario.label.toLowerCase()} listings`}, and see
               pricing models come alive as your dataset grows — on your timeline.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">

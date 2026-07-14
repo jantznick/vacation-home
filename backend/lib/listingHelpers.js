@@ -16,15 +16,19 @@ export function serializeListing(listing) {
   const compPrice = trainingListPrice(listing);
   const freshness = getListingFreshness(listing);
 
+  const lengthFt = listing.lengthFt != null ? Number(listing.lengthFt) : null;
+
   return {
     ...rest,
     listPrice,
     soldPrice,
     acres,
     sqftLiving,
+    lengthFt,
     isSoldComp: isSoldCompListing(listing),
     pricePerAcre: compPrice && acres ? Math.round(compPrice / acres) : null,
     pricePerSqft: compPrice && sqftLiving ? Math.round(compPrice / sqftLiving) : null,
+    pricePerFoot: compPrice && lengthFt ? Math.round(compPrice / lengthFt) : null,
     ...freshness,
     canRefresh: freshness.canRefresh && !isSoldCompListing(listing),
   };
@@ -45,7 +49,7 @@ export function scrapedFieldsToListingData(scraped, { fetchedAt = new Date() } =
     status: scraped.status ?? undefined,
     address: scraped.address ?? null,
     city: scraped.city ?? null,
-    state: scraped.state ?? 'WI',
+    state: scraped.state ?? null,
     zip: scraped.zip ?? null,
     latitude: scraped.latitude ?? null,
     longitude: scraped.longitude ?? null,
@@ -60,6 +64,10 @@ export function scrapedFieldsToListingData(scraped, { fetchedAt = new Date() } =
     yearBuilt: scraped.yearBuilt ?? null,
     waterfront: scraped.waterfront ?? false,
     waterfrontType: scraped.waterfrontType ?? null,
+    lengthFt: scraped.lengthFt ?? null,
+    make: scraped.make ?? null,
+    model: scraped.model ?? null,
+    propulsion: scraped.propulsion ?? null,
     listingDate: scraped.listingDate ? new Date(scraped.listingDate) : null,
     daysOnMarket: scraped.daysOnMarket ?? null,
     photoUrls: scraped.photoUrls ?? null,

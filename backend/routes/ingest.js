@@ -30,12 +30,14 @@ router.post('/preview', async (req, res) => {
       warnings: result.warnings,
       sourceSite: result.sourceSite,
       fetchMethod: result.fetchMethod,
+      needsPaste: Boolean(result.needsPaste),
       apiUsage: result.apiUsage ?? null,
     });
   } catch (error) {
     console.error('Ingest preview error:', error);
     res.status(422).json({
       error: error.message || 'Failed to fetch listing from URL',
+      needsPaste: Boolean(error.needsPaste),
     });
   }
 });
@@ -45,7 +47,7 @@ router.post('/preview-paste', async (req, res) => {
     const { url, pastedData } = req.body;
 
     if (!url?.trim()) {
-      return res.status(400).json({ error: 'Zillow listing URL is required' });
+      return res.status(400).json({ error: 'Listing URL is required' });
     }
     if (!pastedData?.trim()) {
       return res.status(400).json({ error: 'Pasted page data is required' });
@@ -61,6 +63,7 @@ router.post('/preview-paste', async (req, res) => {
       warnings: result.warnings,
       sourceSite: result.sourceSite,
       fetchMethod: result.fetchMethod,
+      needsPaste: Boolean(result.needsPaste),
     });
   } catch (error) {
     console.error('Ingest paste preview error:', error);

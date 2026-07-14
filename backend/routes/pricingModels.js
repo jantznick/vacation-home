@@ -1,4 +1,5 @@
 import express from 'express';
+import prisma from '../lib/prisma.js';
 import {
   createPricingModel,
   deletePricingModel,
@@ -16,8 +17,18 @@ import { searchIdFrom, getPricingModelInSearch } from '../lib/searchScope.js';
 
 const router = express.Router();
 
-router.get('/features', (req, res) => {
-  res.json(getFeatureCatalog());
+router.get('/features', async (req, res) => {
+  try {
+    const searchId = searchIdFrom(req);
+    const search = await prisma.search.findUnique({
+      where: { id: searchId },
+      select: { assetType: true },
+    });
+    res.json(getFeatureCatalog(search?.assetType || 'home'));
+  } catch (error) {
+    console.error('Feature catalog error:', error);
+    res.status(500).json({ error: 'Failed to load feature catalog' });
+  }
 });
 
 router.get('/', async (req, res) => {

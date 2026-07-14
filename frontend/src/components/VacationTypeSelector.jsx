@@ -74,7 +74,7 @@ export default function VacationTypeSelector({ value, onChange, theme }) {
   return (
     <div className="mt-5 min-w-0">
       <p className={`mb-2 text-sm font-medium ${theme?.selectorLabel || 'text-pine-800'}`}>
-        Select your vacation home
+        Select your vacation
       </p>
 
       <div
@@ -82,7 +82,7 @@ export default function VacationTypeSelector({ value, onChange, theme }) {
           theme?.selectorGroup || 'bg-white shadow-md ring-1 ring-pine-900/10'
         }`}
         role="group"
-        aria-label="Select your vacation home"
+        aria-label="Select your vacation type"
         onMouseEnter={autoCycling ? stopAutoCycle : undefined}
         onFocus={autoCycling ? stopAutoCycle : undefined}
       >

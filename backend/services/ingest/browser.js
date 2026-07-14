@@ -2,26 +2,33 @@ import puppeteer from 'puppeteer';
 
 let browserPromise = null;
 
+function isProduction() {
+  return process.env.NODE_ENV === 'production';
+}
+
 function isDebugMode() {
+  // Never open a visible browser in production.
+  if (isProduction()) return false;
   return process.env.PUPPETEER_HEADLESS === 'false'
     || process.env.PUPPETEER_DEBUG === 'true';
 }
 
 function debugPauseMs() {
+  if (isProduction()) return 0;
   if (process.env.PUPPETEER_DEBUG_PAUSE_MS !== undefined) {
     return Number(process.env.PUPPETEER_DEBUG_PAUSE_MS);
   }
-  return isDebugMode() ? 60000 : 0;
+  return isDebugMode() ? 10000 : 0;
 }
 
 function launchOptions() {
   const debug = isDebugMode();
-  const headless = process.env.PUPPETEER_HEADLESS !== 'false';
+  // Production always runs headless; local debug can set PUPPETEER_HEADLESS=false.
+  const headless = isProduction() || process.env.PUPPETEER_HEADLESS !== 'false';
 
   const options = {
     headless,
     slowMo: debug ? Number(process.env.PUPPETEER_SLOW_MO || 50) : 0,
-    devtools: process.env.PUPPETEER_DEVTOOLS === 'true',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -30,6 +37,10 @@ function launchOptions() {
       '--window-size=1366,900',
     ],
   };
+
+  if (debug) {
+    options.devtools = process.env.PUPPETEER_DEVTOOLS === 'true';
+  }
 
   if (process.env.PUPPETEER_USE_SYSTEM_CHROME === 'true') {
     options.channel = 'chrome';
@@ -112,7 +123,16 @@ export async function fetchHtmlWithPuppeteer(url) {
       );
     }
 
-    await page.waitForSelector('#__NEXT_DATA__', { timeout: 20000 }).catch(() => {});
+    await page.waitForFunction(
+      () => {
+        if (document.getElementById('__NEXT_DATA__')) return true;
+        if (document.querySelector('script[type="application/ld+json"]')) return true;
+        return [...document.scripts].some((script) => (
+          (script.textContent || '').includes('var __REDUX_STATE__=')
+        ));
+      },
+      { timeout: 20000 },
+    ).catch(() => {});
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 }).catch(() => {});
 
     if (debug && pauseMs > 0) {
@@ -121,6 +141,14 @@ export async function fetchHtmlWithPuppeteer(url) {
     }
 
     const html = await page.content();
+    if (debug) {
+      console.log('[puppeteer debug] HTML snapshot:', {
+        length: html.length,
+        hasRedux: html.includes('var __REDUX_STATE__='),
+        hasNextData: html.includes('__NEXT_DATA__'),
+        hasLdJson: /type=["']application\/ld\+json["']/i.test(html),
+      });
+    }
 
     if (httpError && debug) {
       console.warn('[puppeteer debug] Returning HTML despite HTTP error for inspection/parsing');
