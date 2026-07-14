@@ -41,6 +41,13 @@ const router = express.Router();
 const listingInclude = {
   region: { select: { id: true, name: true, slug: true } },
   lake: { select: { id: true, name: true } },
+  marina: {
+    select: {
+      id: true, name: true, slug: true,
+      slipOptions: true, winterStorageCost: true,
+      seasonOpen: true, seasonClose: true, yearRound: true,
+    },
+  },
   boatMake: {
     select: {
       id: true,

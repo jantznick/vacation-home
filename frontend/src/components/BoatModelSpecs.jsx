@@ -79,6 +79,7 @@ export default function BoatModelSpecs({
   showTitle = true,
   showSummary = true,
   showHighlights = true,
+  showSections = true,
   modelCheck = null,
 }) {
   if (!boatModelHasSpecs(model) && !modelCheck) return null;
@@ -158,35 +159,37 @@ export default function BoatModelSpecs({
         </div>
       )}
 
-      <div
-        className={`grid gap-x-10 gap-y-6 ${
-          compact ? 'mt-5 sm:grid-cols-2' : 'mt-6 sm:grid-cols-2'
-        }`}
-      >
-        {sections.map((section) => (
-          <section key={section.title} className="min-w-0">
-            <h4 className="mb-1 border-b border-pine-200 pb-1.5 text-sm font-semibold text-pine-900">
-              {section.title}
-            </h4>
-            <dl>
-              {section.rows.map((item) => (
-                <div
-                  key={item.id || item.label}
-                  className="flex items-baseline justify-between gap-4 border-b border-pine-100 py-2 last:border-0"
-                >
-                  <dt className="min-w-0 shrink text-sm text-pine-600">
-                    <SpecLabel label={item.label} tip={item.tip} />
-                    <RowStatus check={bySpec[item.id]} />
-                  </dt>
-                  <dd className="text-right text-sm font-medium tabular-nums text-pine-950">
-                    {item.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
-      </div>
+      {showSections && (
+        <div
+          className={`grid gap-x-10 gap-y-6 ${
+            compact ? 'mt-5 sm:grid-cols-2' : 'mt-6 sm:grid-cols-2'
+          }`}
+        >
+          {sections.map((section) => (
+            <section key={section.title} className="min-w-0">
+              <h4 className="mb-1 border-b border-pine-200 pb-1.5 text-sm font-semibold text-pine-900">
+                {section.title}
+              </h4>
+              <dl>
+                {section.rows.map((item) => (
+                  <div
+                    key={item.id || item.label}
+                    className="flex items-baseline justify-between gap-4 border-b border-pine-100 py-2 last:border-0"
+                  >
+                    <dt className="min-w-0 shrink text-sm text-pine-600">
+                      <SpecLabel label={item.label} tip={item.tip} />
+                      <RowStatus check={bySpec[item.id]} />
+                    </dt>
+                    <dd className="text-right text-sm font-medium tabular-nums text-pine-950">
+                      {item.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      )}
 
       {modelCheck && <ListingModelCheck modelCheck={modelCheck} />}
     </div>

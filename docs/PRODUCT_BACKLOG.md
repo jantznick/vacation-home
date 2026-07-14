@@ -11,6 +11,7 @@ Suggestions for making boat and vacation-home decisions easier. Prioritized for 
 - Listing detail click-to-edit, nicknames, freshness refresh
 - Shortlist / comparison board with sistership comps
 - Marinas (boat equivalent of Regions) with carrying costs and seasonality
+- Carrying cost calculator: financing (down %, rate, term), insurance, tax, marina slip/storage → monthly/annual breakdown on listing detail + comparison board
 
 ## Priority next
 
@@ -66,7 +67,7 @@ Search-level constraints with a quiet “fits” score on listings.
 
 ## Home-specific
 
-9. **Carrying cost / seasonality** — HOA, insurance ballpark, winter access, well/septic flags. Boat carrying costs now live on the Marina entity (slip fees, winter storage, maintenance, season). Home-side Region carrying costs deferred.
+9. **Carrying cost / seasonality** (shipped v1) — Per-listing financing (down %, rate, term → monthly payment), annual insurance, annual tax. Boat listings pull slip fees and winter storage from their linked Marina. Carrying cost card on listing detail; comparison board rows for loan, slip, storage, insurance, tax, total monthly/annual. Home-side Region carrying costs (HOA, heating, plowing) deferred.
 10. **“Can we use it?”** — drive time + calendar / access reality, not just map pins. Marina seasonality (seasonOpen/seasonClose/yearRound) is a first step; drive-time surfacing on comparison board is next.
 
 ## Collaboration

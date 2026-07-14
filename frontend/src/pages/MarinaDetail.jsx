@@ -131,7 +131,22 @@ export default function MarinaDetail() {
             {slips.length > 0 && (
               <div className="mb-4">
                 <p className="mb-2 text-xs font-medium text-pine-600">Slip options</p>
-                <div className="overflow-x-auto">
+                <div className="space-y-2 sm:hidden">
+                  {slips.map((opt, i) => (
+                    <div key={i} className="rounded-lg border border-pine-100 p-3">
+                      <p className="text-sm font-medium text-pine-900">{opt.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm tabular-nums text-pine-600">
+                        <span className="font-medium text-pine-800">{formatSlipRate(opt)}</span>
+                        {slipAnnualCost(opt, 36) != null && (
+                          <span>≈ {formatCurrency(slipAnnualCost(opt, 36))}/yr (36')</span>
+                        )}
+                        {opt.maxLengthFt && <span>Max {opt.maxLengthFt}'</span>}
+                      </div>
+                      {opt.notes && <p className="mt-1 text-xs text-pine-400">{opt.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-pine-200 text-xs text-pine-500">
@@ -278,15 +293,16 @@ export default function MarinaDetail() {
         </div>
       </div>
 
-      <ConfirmModal
-        open={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete}
-        title="Delete marina"
-        message={`Delete "${marina.name}"? Boats linked to this marina will be unlinked but not deleted.`}
-        confirmLabel={deleting ? 'Deleting...' : 'Delete'}
-        variant="danger"
-      />
+      {showDelete && (
+        <ConfirmModal
+          title="Delete marina"
+          message={`Delete "${marina.name}"? Boats linked to this marina will be unlinked but not deleted.`}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDelete(false)}
+          loading={deleting}
+          loadingLabel="Deleting..."
+        />
+      )}
     </div>
   );
 }

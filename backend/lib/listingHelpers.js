@@ -9,6 +9,103 @@ import {
 } from './listingModelCheck.js';
 
 /**
+ * Pick the best slip option from a marina for a given boat length.
+ * Prefers per_ft options that fit, falls back to any fixed option.
+ */
+function bestSlipOption(marina, lengthFt) {
+  const options = Array.isArray(marina?.slipOptions) ? marina.slipOptions : [];
+  if (options.length === 0) return null;
+
+  const fitting = options.filter(
+    (o) => o.maxLengthFt == null || (lengthFt && lengthFt <= o.maxLengthFt),
+  );
+  const pool = fitting.length > 0 ? fitting : options;
+
+  const perFt = pool.find((o) => o.feeType === 'per_ft');
+  if (perFt) return perFt;
+  return pool[0];
+}
+
+function slipAnnualFromOption(opt, lengthFt) {
+  if (!opt || opt.feeAmount == null) return null;
+  const amount = Number(opt.feeAmount);
+  const base = opt.feeType === 'per_ft' ? amount * (lengthFt || 0) : amount;
+  if (opt.feePeriod === 'annual' || opt.feePeriod === 'seasonal') return Math.round(base);
+  return Math.round(base * 12);
+}
+
+/**
+ * Standard monthly payment for a fixed-rate loan.
+ */
+function monthlyPayment(principal, annualRate, years) {
+  if (!principal || !annualRate || !years) return null;
+  const r = annualRate / 100 / 12;
+  const n = years * 12;
+  if (r === 0) return Math.round(principal / n);
+  const payment = principal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  return Math.round(payment);
+}
+
+/**
+ * Compute annual carrying cost breakdown for a listing.
+ */
+function computeCarryingCost(listing, { listPrice, lengthFt }) {
+  const price = listPrice ?? 0;
+  const downPct = listing.downPaymentPct ?? null;
+  const rate = listing.interestRate ?? null;
+  const termYears = listing.loanTermYears ?? null;
+
+  let loanPaymentMonthly = null;
+  let loanPaymentAnnual = null;
+  let downPaymentAmount = null;
+  let loanAmount = null;
+
+  if (price && downPct != null && rate != null && termYears) {
+    downPaymentAmount = Math.round(price * downPct / 100);
+    loanAmount = price - downPaymentAmount;
+    loanPaymentMonthly = monthlyPayment(loanAmount, rate, termYears);
+    loanPaymentAnnual = loanPaymentMonthly ? loanPaymentMonthly * 12 : null;
+  }
+
+  const marina = listing.marina || null;
+  const options = Array.isArray(marina?.slipOptions) ? marina.slipOptions : [];
+  const slip = listing.preferredSlipIndex != null && options[listing.preferredSlipIndex]
+    ? options[listing.preferredSlipIndex]
+    : bestSlipOption(marina, lengthFt);
+  const slipAnnual = slip ? slipAnnualFromOption(slip, lengthFt) : null;
+  const winterStorage = marina?.winterStorageCost ?? null;
+
+  const insurance = listing.annualInsurance ?? null;
+  const tax = listing.annualTax ?? null;
+  const maintenance = listing.annualMaintenance ?? null;
+
+  const customCosts = Array.isArray(listing.additionalCosts)
+    ? listing.additionalCosts.filter((c) => c && c.name && c.annualCost != null)
+    : [];
+  const customTotal = customCosts.reduce((s, c) => s + Number(c.annualCost), 0) || null;
+
+  const parts = [loanPaymentAnnual, slipAnnual, winterStorage, insurance, tax, maintenance, customTotal];
+  const knownParts = parts.filter((p) => p != null);
+  const totalAnnual = knownParts.length > 0 ? knownParts.reduce((s, v) => s + v, 0) : null;
+
+  return {
+    loanPaymentMonthly,
+    loanPaymentAnnual,
+    downPaymentAmount,
+    loanAmount,
+    slipAnnual,
+    slipOptionName: slip?.name ?? null,
+    winterStorage,
+    insurance,
+    tax,
+    maintenance,
+    customCosts,
+    totalAnnual,
+    totalMonthly: totalAnnual != null ? Math.round(totalAnnual / 12) : null,
+  };
+}
+
+/**
  * Serialize a listing for API responses with derived metrics.
  */
 export function serializeListing(listing) {
@@ -32,6 +129,8 @@ export function serializeListing(listing) {
     })()
     : null;
 
+  const carryingCost = computeCarryingCost(listing, { listPrice, lengthFt });
+
   return {
     ...rest,
     listPrice,
@@ -44,6 +143,7 @@ export function serializeListing(listing) {
     pricePerSqft: compPrice && sqftLiving ? Math.round(compPrice / sqftLiving) : null,
     pricePerFoot: compPrice && lengthFt ? Math.round(compPrice / lengthFt) : null,
     modelCheck,
+    carryingCost,
     ...freshness,
     canRefresh: freshness.canRefresh && !isSoldCompListing(listing),
   };

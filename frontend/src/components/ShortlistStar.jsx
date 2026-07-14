@@ -18,7 +18,7 @@ export default function ShortlistStar({ active, canEdit, onToggle, className = '
   return (
     <button
       type="button"
-      className={`${base} ${color} rounded-md p-1 hover:scale-110 ${className}`}
+      className={`${base} ${color} rounded-md p-1.5 hover:scale-110 ${className}`}
       title={active ? 'Remove from shortlist' : 'Add to shortlist'}
       aria-label={active ? 'Remove from shortlist' : 'Add to shortlist'}
       onClick={(e) => {

@@ -61,9 +61,11 @@ export default function SistershipComps({ listing, searchId, api, canEdit, onLis
   const allIds = [listing.id, ...sisterships.map((s) => s.id)].join(',');
   const compareUrl = searchPath(searchId, `/compare?ids=${allIds}&boatModelId=${modelId}`);
 
+  const allListings = [listing, ...sisterships];
+
   return (
     <section className="rounded-xl border border-pine-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-pine-100 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-pine-100 px-4 py-3 sm:px-5">
         <h3 className="text-sm font-semibold text-pine-900">
           vs {sisterships.length} other tracked {modelName}{sisterships.length !== 1 ? 's' : ''}
         </h3>
@@ -75,7 +77,8 @@ export default function SistershipComps({ listing, searchId, api, canEdit, onLis
         </Link>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-pine-100 text-xs text-pine-500">
@@ -108,6 +111,52 @@ export default function SistershipComps({ listing, searchId, api, canEdit, onLis
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="divide-y divide-pine-100 sm:hidden">
+        {allListings.map((ship) => {
+          const isSelf = ship.id === listing.id;
+          const price = ship.isSoldComp ? (ship.soldPrice ?? ship.listPrice) : ship.listPrice;
+          return (
+            <div key={ship.id} className={`px-4 py-3 ${isSelf ? 'bg-pine-50/60' : ''}`}>
+              <div className="flex items-center gap-2">
+                <ShortlistStar
+                  active={ship.shortlisted}
+                  canEdit={canEdit}
+                  onToggle={isSelf
+                    ? () => onListingUpdate?.({ shortlisted: !ship.shortlisted })
+                    : () => toggleShortlist(ship)
+                  }
+                />
+                {isSelf ? (
+                  <span className="text-sm font-medium text-pine-900">
+                    {formatBoatTitle(ship)}
+                    <span className="ml-1 text-xs text-pine-400">(this)</span>
+                  </span>
+                ) : (
+                  <Link
+                    to={searchPath(searchId, `/listings/${ship.id}`)}
+                    className="text-sm font-medium text-pine-900 hover:text-pine-700"
+                  >
+                    {formatBoatTitle(ship)}
+                  </Link>
+                )}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums text-pine-600">
+                <span className="font-medium text-pine-900">{formatCurrency(price)}</span>
+                {ship.pricePerFoot && <span>{formatCurrency(ship.pricePerFoot)}/ft</span>}
+                {ship.yearBuilt && <span>{ship.yearBuilt}</span>}
+                {ship.draftFt != null && <span>{ship.draftFt}' draft</span>}
+                {ship.engineHours != null && <span>{ship.engineHours.toLocaleString()} hrs</span>}
+              </div>
+              <div className="mt-1 text-amber-500 text-xs">
+                {'★'.repeat(ship.interestLevel || 0)}
+                <span className="text-pine-200">{'☆'.repeat(5 - (ship.interestLevel || 0))}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

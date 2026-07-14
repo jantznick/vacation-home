@@ -197,8 +197,7 @@ export default function CompareBoard() {
   const anyHasRow = (key) => listings.some((l) => l[key] != null);
   const visibleAssetRows = assetRows.filter((r) => anyHasRow(r.key));
 
-  const colWidth = listings.length <= 3 ? 'min-w-[220px]' : 'min-w-[180px]';
-  const labelWidth = 'min-w-[120px] max-w-[140px]';
+  const allRows = buildCompareRows({ listings, boatMode, searchId, search, assetType, visibleAssetRows });
 
   return (
     <div>
@@ -216,9 +215,9 @@ export default function CompareBoard() {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className={`${labelWidth} p-2`} />
+              <th className="sticky left-0 z-10 bg-white min-w-[80px] max-w-[110px] p-2 md:min-w-[120px] md:max-w-[140px]" />
               {listings.map((listing) => (
-                <th key={listing.id} className={`${colWidth} p-2 text-center align-top`}>
+                <th key={listing.id} className={`${listings.length <= 3 ? 'min-w-[140px] md:min-w-[220px]' : 'min-w-[120px] md:min-w-[180px]'} p-2 text-center align-top`}>
                   <CellPhoto listing={listing} searchId={searchId} boat={boatMode} />
                   <div className="mt-2 flex items-center justify-center gap-1">
                     <ShortlistStar
@@ -228,7 +227,7 @@ export default function CompareBoard() {
                     />
                     <Link
                       to={searchPath(searchId, `/listings/${listing.id}`)}
-                      className="font-semibold text-pine-900 hover:text-pine-700"
+                      className="text-xs font-semibold text-pine-900 hover:text-pine-700 md:text-sm"
                     >
                       {listingTitle(listing, boatMode)}
                     </Link>
@@ -247,58 +246,29 @@ export default function CompareBoard() {
             </tr>
           </thead>
           <tbody>
-            <CompareRow label="Price" listings={listings} render={(l) => (
-              <span className="font-semibold">{formatCurrency(l.isSoldComp ? (l.soldPrice ?? l.listPrice) : l.listPrice)}</span>
-            )} />
-            <CompareRow label="Year" listings={listings} render={(l) => fmt(l.yearBuilt)} />
-            <CompareRow label="Status" listings={listings} render={(l) => statusLabel(l.status, LISTING_STATUSES)} />
-            <CompareRow label="Interest" listings={listings} render={(l) => (
-              <span className="text-amber-500">{'★'.repeat(l.interestLevel || 0)}{'☆'.repeat(5 - (l.interestLevel || 0))}</span>
-            )} />
-            <CompareRow label="Fit" listings={listings} render={(l) => (
-              <CriteriaFitBadge listing={l} search={search} assetType={assetType} />
-            )} />
-
-            {visibleAssetRows.length > 0 && (
-              <tr>
-                <td
-                  colSpan={listings.length + 1}
-                  className="border-t-2 border-pine-200 px-2 pt-4 pb-1 text-xs font-bold uppercase tracking-wide text-pine-500"
-                >
-                  {boatMode ? 'Boat specs' : 'Property details'}
-                </td>
-              </tr>
+            {allRows.map((row) =>
+              row.section ? (
+                <tr key={row.key}>
+                  <td className="sticky left-0 z-10 bg-white border-t-2 border-pine-200 px-2 pt-4 pb-1 text-xs font-bold uppercase tracking-wide text-pine-500">
+                    {row.section}
+                  </td>
+                  {listings.map((l) => (
+                    <td key={l.id} className="border-t-2 border-pine-200" />
+                  ))}
+                </tr>
+              ) : (
+                <tr key={row.key} className="border-t border-pine-100">
+                  <td className="sticky left-0 z-10 bg-white whitespace-nowrap px-2 py-2 text-xs font-medium text-pine-600 align-top">
+                    {row.label}
+                  </td>
+                  {listings.map((listing) => (
+                    <td key={listing.id} className="px-2 py-2 text-center text-xs text-pine-800 align-top md:text-sm">
+                      {row.render(listing)}
+                    </td>
+                  ))}
+                </tr>
+              ),
             )}
-            {visibleAssetRows.map((row) => (
-              <CompareRow key={row.key} label={row.label} listings={listings} render={row.render} />
-            ))}
-
-            <tr>
-              <td
-                colSpan={listings.length + 1}
-                className="border-t-2 border-pine-200 px-2 pt-4 pb-1 text-xs font-bold uppercase tracking-wide text-pine-500"
-              >
-                Evaluation
-              </td>
-            </tr>
-            <CompareRow label="Pros" listings={listings} render={(l) => <ProConList text={l.pros} tone="pro" />} />
-            <CompareRow label="Cons" listings={listings} render={(l) => <ProConList text={l.cons} tone="con" />} />
-            <CompareRow label="Notes" listings={listings} render={(l) => (
-              l.notes ? <span className="whitespace-pre-wrap leading-snug">{l.notes}</span> : <span className="text-pine-300">—</span>
-            )} />
-
-            <tr>
-              <td
-                colSpan={listings.length + 1}
-                className="border-t-2 border-pine-200 px-2 pt-4 pb-1 text-xs font-bold uppercase tracking-wide text-pine-500"
-              >
-                Meta
-              </td>
-            </tr>
-            <CompareRow label="Last refreshed" listings={listings} render={(l) => (
-              <span className="text-pine-500">{l.fetchedAt ? formatFetchedAt(l.fetchedAt) : '—'}</span>
-            )} />
-            <CompareRow label="Days on market" listings={listings} render={(l) => fmt(l.daysOnMarket)} />
           </tbody>
         </table>
       </Card>
@@ -306,17 +276,77 @@ export default function CompareBoard() {
   );
 }
 
-function CompareRow({ label, listings, render }) {
-  return (
-    <tr className="border-t border-pine-100">
-      <td className="whitespace-nowrap px-2 py-2 text-xs font-medium text-pine-600 align-top">
-        {label}
-      </td>
-      {listings.map((listing) => (
-        <td key={listing.id} className="px-2 py-2 text-center text-sm text-pine-800 align-top">
-          {render(listing)}
-        </td>
-      ))}
-    </tr>
-  );
+function buildCompareRows({ listings, boatMode, searchId, search, assetType, visibleAssetRows }) {
+  const rows = [];
+
+  rows.push({ key: 'price', label: 'Price', render: (l) => (
+    <span className="font-semibold">{formatCurrency(l.isSoldComp ? (l.soldPrice ?? l.listPrice) : l.listPrice)}</span>
+  )});
+  rows.push({ key: 'year', label: 'Year', render: (l) => fmt(l.yearBuilt) });
+  rows.push({ key: 'status', label: 'Status', render: (l) => statusLabel(l.status, LISTING_STATUSES) });
+  rows.push({ key: 'interest', label: 'Interest', render: (l) => (
+    <span className="text-amber-500">{'★'.repeat(l.interestLevel || 0)}{'☆'.repeat(5 - (l.interestLevel || 0))}</span>
+  )});
+  rows.push({ key: 'fit', label: 'Fit', render: (l) => (
+    <CriteriaFitBadge listing={l} search={search} assetType={assetType} />
+  )});
+
+  if (visibleAssetRows.length > 0) {
+    rows.push({ key: 'section-specs', section: boatMode ? 'Boat specs' : 'Property details' });
+    visibleAssetRows.forEach((row) => {
+      rows.push({ key: row.key, label: row.label, render: row.render });
+    });
+  }
+
+  rows.push({ key: 'section-eval', section: 'Evaluation' });
+  rows.push({ key: 'pros', label: 'Pros', render: (l) => <ProConList text={l.pros} tone="pro" /> });
+  rows.push({ key: 'cons', label: 'Cons', render: (l) => <ProConList text={l.cons} tone="con" /> });
+  rows.push({ key: 'notes', label: 'Notes', render: (l) => (
+    l.notes ? <span className="whitespace-pre-wrap leading-snug">{l.notes}</span> : <span className="text-pine-300">—</span>
+  )});
+
+  if (listings.some((l) => l.carryingCost?.totalAnnual != null)) {
+    const ccRows = [
+      { key: 'cc-loan', label: 'Loan/mo', has: (l) => l.carryingCost?.loanPaymentMonthly != null, val: (l) => formatCurrency(l.carryingCost.loanPaymentMonthly) },
+      ...(boatMode ? [
+        { key: 'cc-slip', label: 'Slip/yr', has: (l) => l.carryingCost?.slipAnnual != null, val: (l) => formatCurrency(l.carryingCost.slipAnnual) },
+        { key: 'cc-winter', label: 'Winter storage', has: (l) => l.carryingCost?.winterStorage != null, val: (l) => formatCurrency(l.carryingCost.winterStorage) },
+      ] : []),
+      { key: 'cc-maint', label: 'Maintenance/yr', has: (l) => l.carryingCost?.maintenance != null, val: (l) => formatCurrency(l.carryingCost.maintenance) },
+      { key: 'cc-ins', label: 'Insurance/yr', has: (l) => l.carryingCost?.insurance != null, val: (l) => formatCurrency(l.carryingCost.insurance) },
+      { key: 'cc-tax', label: 'Tax/yr', has: (l) => l.carryingCost?.tax != null, val: (l) => formatCurrency(l.carryingCost.tax) },
+    ].filter((r) => listings.some(r.has));
+
+    rows.push({ key: 'section-cc', section: 'Carrying costs' });
+    ccRows.forEach((r) => {
+      rows.push({ key: r.key, label: r.label, render: (l) => (
+        r.has(l) ? <span>{r.val(l)}</span> : <span className="text-pine-300">—</span>
+      )});
+    });
+    rows.push({ key: 'cc-total-mo', label: 'Total/mo', render: (l) => (
+      l.carryingCost?.totalMonthly != null
+        ? <span className="font-semibold">{formatCurrency(l.carryingCost.totalMonthly)}</span>
+        : <span className="text-pine-300">—</span>
+    )});
+    rows.push({ key: 'cc-total-yr', label: 'Total/yr', render: (l) => (
+      l.carryingCost?.totalAnnual != null
+        ? <span className="font-semibold">{formatCurrency(l.carryingCost.totalAnnual)}</span>
+        : <span className="text-pine-300">—</span>
+    )});
+  }
+
+  rows.push({ key: 'section-meta', section: 'Meta' });
+  rows.push({ key: 'refreshed', label: 'Last refreshed', render: (l) => (
+    <span className="text-pine-500">{l.fetchedAt ? formatFetchedAt(l.fetchedAt) : '—'}</span>
+  )});
+  rows.push({ key: 'dom', label: 'Days on market', render: (l) => fmt(l.daysOnMarket) });
+  if (boatMode && listings.some((l) => l.marina)) {
+    rows.push({ key: 'marina', label: 'Marina', render: (l) => (
+      l.marina
+        ? <Link to={searchPath(searchId, `/marinas/${l.marina.id}`)} className="text-pine-600 hover:text-pine-900">{l.marina.name}</Link>
+        : <span className="text-pine-300">—</span>
+    )});
+  }
+
+  return rows;
 }

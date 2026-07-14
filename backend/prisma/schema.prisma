@@ -396,6 +396,18 @@ model Listing {
   interestLevel      Int?
   shortlisted        Boolean         @default(false)
   shortlistRank      Int?
+  /// Financing
+  downPaymentPct     Float?
+  interestRate       Float?
+  loanTermYears      Int?
+  /// Annual costs
+  annualInsurance    Int?
+  annualTax          Int?
+  annualMaintenance  Int?
+  /// Which slip option index on the linked marina the user selected.
+  preferredSlipIndex Int?
+  /// Custom cost line items — JSON array of { name, annualCost }.
+  additionalCosts    Json?           @db.JsonB
   visited            Boolean         @default(false)
   visitNotes         String?
   listingDate        DateTime?

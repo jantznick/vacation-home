@@ -62,6 +62,13 @@ const emptyForm = {
   interestLevel: '',
   visited: false,
   visitNotes: '',
+  marinaId: '',
+  downPaymentPct: '',
+  interestRate: '',
+  loanTermYears: '',
+  annualInsurance: '',
+  annualTax: '',
+  annualMaintenance: '',
   daysOnMarket: '',
   photoUrls: [],
 };
@@ -94,6 +101,7 @@ export default function ListingForm() {
   const [rawScrapedData, setRawScrapedData] = useState(null);
   const [error, setError] = useState('');
   const [showAddLake, setShowAddLake] = useState(false);
+  const [marinas, setMarinas] = useState([]);
 
   useEffect(() => {
     if (!homeMode) {
@@ -109,6 +117,24 @@ export default function ListingForm() {
     loadRegions();
     return undefined;
   }, [api, homeMode]);
+
+  useEffect(() => {
+    if (!boatMode) {
+      setMarinas([]);
+      return;
+    }
+
+    const loadMarinas = async () => {
+      try {
+        const data = await api.marinas.list();
+        setMarinas(data.marinas);
+      } catch {
+        setMarinas([]);
+      }
+    };
+
+    loadMarinas();
+  }, [api, boatMode]);
 
   useEffect(() => {
     if (!homeMode || !form.regionId) {
@@ -184,6 +210,13 @@ export default function ListingForm() {
           interestLevel: listing.interestLevel ?? '',
           visited: listing.visited,
           visitNotes: listing.visitNotes || '',
+          marinaId: listing.marinaId || '',
+          downPaymentPct: listing.downPaymentPct ?? '',
+          interestRate: listing.interestRate ?? '',
+          loanTermYears: listing.loanTermYears ?? '',
+          annualInsurance: listing.annualInsurance ?? '',
+          annualTax: listing.annualTax ?? '',
+          annualMaintenance: listing.annualMaintenance ?? '',
           daysOnMarket: listing.daysOnMarket ?? '',
         });
         if (listing.sourceUrl) {
@@ -443,6 +476,13 @@ export default function ListingForm() {
           interestLevel: form.interestLevel ? Number(form.interestLevel) : null,
           visited: form.visited,
           visitNotes: form.visitNotes || null,
+          marinaId: form.marinaId || null,
+          downPaymentPct: form.downPaymentPct !== '' ? Number(form.downPaymentPct) : null,
+          interestRate: form.interestRate !== '' ? Number(form.interestRate) : null,
+          loanTermYears: form.loanTermYears ? Number(form.loanTermYears) : null,
+          annualInsurance: form.annualInsurance ? Number(form.annualInsurance) : null,
+          annualTax: form.annualTax ? Number(form.annualTax) : null,
+          annualMaintenance: form.annualMaintenance ? Number(form.annualMaintenance) : null,
           daysOnMarket: form.daysOnMarket ? Number(form.daysOnMarket) : null,
           photoUrls: form.photoUrls?.length ? form.photoUrls : null,
         }
@@ -474,6 +514,12 @@ export default function ListingForm() {
           interestLevel: form.interestLevel ? Number(form.interestLevel) : null,
           visited: form.visited,
           visitNotes: form.visitNotes || null,
+          downPaymentPct: form.downPaymentPct !== '' ? Number(form.downPaymentPct) : null,
+          interestRate: form.interestRate !== '' ? Number(form.interestRate) : null,
+          loanTermYears: form.loanTermYears ? Number(form.loanTermYears) : null,
+          annualInsurance: form.annualInsurance ? Number(form.annualInsurance) : null,
+          annualTax: form.annualTax ? Number(form.annualTax) : null,
+          annualMaintenance: form.annualMaintenance ? Number(form.annualMaintenance) : null,
           daysOnMarket: form.daysOnMarket ? Number(form.daysOnMarket) : null,
           photoUrls: form.photoUrls?.length ? form.photoUrls : null,
           ...(rawScrapedData != null ? { rawScrapedData } : {}),
@@ -758,6 +804,43 @@ export default function ListingForm() {
                   </FormField>
                 )}
               </section>
+
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-medium text-pine-900">Financing & carrying costs</h2>
+                  <p className="mt-1 text-sm text-pine-600">
+                    Used to calculate monthly/annual cost of ownership.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <FormField label="Down payment (%)" htmlFor="downPaymentPct">
+                    <input id="downPaymentPct" name="downPaymentPct" type="number" step="0.1" min="0" max="100" value={form.downPaymentPct} onChange={handleChange} className={inputClass} placeholder="e.g. 20" />
+                  </FormField>
+                  <FormField label="Interest rate (%)" htmlFor="interestRate">
+                    <input id="interestRate" name="interestRate" type="number" step="0.01" min="0" value={form.interestRate} onChange={handleChange} className={inputClass} placeholder="e.g. 7.5" />
+                  </FormField>
+                  <FormField label="Loan term (years)" htmlFor="loanTermYears">
+                    <input id="loanTermYears" name="loanTermYears" type="number" min="1" max="30" value={form.loanTermYears} onChange={handleChange} className={inputClass} placeholder="e.g. 15" />
+                  </FormField>
+                  <FormField label="Annual insurance ($)" htmlFor="annualInsurance">
+                    <input id="annualInsurance" name="annualInsurance" type="number" min="0" value={form.annualInsurance} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Annual tax ($)" htmlFor="annualTax">
+                    <input id="annualTax" name="annualTax" type="number" min="0" value={form.annualTax} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Annual maintenance ($)" htmlFor="annualMaintenance">
+                    <input id="annualMaintenance" name="annualMaintenance" type="number" min="0" value={form.annualMaintenance} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Marina" htmlFor="marinaId">
+                    <select id="marinaId" name="marinaId" value={form.marinaId} onChange={handleChange} className={inputClass}>
+                      <option value="">No marina</option>
+                      {marinas.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                </div>
+              </section>
             </>
           ) : (
             <>
@@ -926,6 +1009,35 @@ export default function ListingForm() {
                     />
                   </FormField>
                 )}
+              </section>
+
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-medium text-pine-900">Financing & carrying costs</h2>
+                  <p className="mt-1 text-sm text-pine-600">
+                    Used to calculate monthly/annual cost of ownership.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <FormField label="Down payment (%)" htmlFor="downPaymentPct">
+                    <input id="downPaymentPct" name="downPaymentPct" type="number" step="0.1" min="0" max="100" value={form.downPaymentPct} onChange={handleChange} className={inputClass} placeholder="e.g. 20" />
+                  </FormField>
+                  <FormField label="Interest rate (%)" htmlFor="interestRate">
+                    <input id="interestRate" name="interestRate" type="number" step="0.01" min="0" value={form.interestRate} onChange={handleChange} className={inputClass} placeholder="e.g. 7.5" />
+                  </FormField>
+                  <FormField label="Loan term (years)" htmlFor="loanTermYears">
+                    <input id="loanTermYears" name="loanTermYears" type="number" min="1" max="30" value={form.loanTermYears} onChange={handleChange} className={inputClass} placeholder="e.g. 30" />
+                  </FormField>
+                  <FormField label="Annual insurance ($)" htmlFor="annualInsurance">
+                    <input id="annualInsurance" name="annualInsurance" type="number" min="0" value={form.annualInsurance} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Annual tax ($)" htmlFor="annualTax">
+                    <input id="annualTax" name="annualTax" type="number" min="0" value={form.annualTax} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Annual maintenance ($)" htmlFor="annualMaintenance">
+                    <input id="annualMaintenance" name="annualMaintenance" type="number" min="0" value={form.annualMaintenance} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                </div>
               </section>
             </>
           )}

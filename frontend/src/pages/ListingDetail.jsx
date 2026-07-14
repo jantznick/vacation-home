@@ -366,6 +366,524 @@ function InterestDots({ value, canEdit, onSave }) {
   );
 }
 
+function CollapsibleModelSpecs({ listing, searchId }) {
+  const [expanded, setExpanded] = useState(false);
+  const titleTo = listing.boatMakeId && listing.boatModelId
+    ? searchPath(searchId, `/makes/${listing.boatMakeId}/models/${listing.boatModelId}`)
+    : null;
+
+  return (
+    <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
+      <BoatModelSpecs
+        model={listing.boatModel}
+        title={listing.boatModel?.name || 'Model specs'}
+        titleTo={titleTo}
+        modelCheck={listing.modelCheck}
+        compact
+        showHighlights
+        showSections={expanded}
+      />
+      <button
+        type="button"
+        className="mt-3 text-sm text-pine-500 hover:text-pine-800"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        {expanded ? 'Show less ▴' : 'Show all specs ▾'}
+      </button>
+    </section>
+  );
+}
+
+function AddCostModal({ boatMode, listing, onSave, onClose, api, initialTab = 'maintenance' }) {
+  const editingCustomIndex = initialTab.startsWith('custom-') ? Number(initialTab.split('-')[1]) : null;
+  const editingCustom = editingCustomIndex != null && Array.isArray(listing.additionalCosts) ? listing.additionalCosts[editingCustomIndex] : null;
+  const [mode, setMode] = useState(editingCustom ? 'custom' : initialTab);
+  const [marinas, setMarinas] = useState([]);
+  const [marinasLoaded, setMarinasLoaded] = useState(false);
+  const [form, setForm] = useState({
+    downPaymentPct: listing.downPaymentPct ?? '',
+    interestRate: listing.interestRate ?? '',
+    loanTermYears: listing.loanTermYears ?? '',
+    marinaId: listing.marinaId || '',
+    slipIndex: listing.preferredSlipIndex ?? '',
+    annualInsurance: listing.annualInsurance ?? '',
+    annualTax: listing.annualTax ?? '',
+    dpMode: 'pct',
+    downPaymentDollars: listing.listPrice && listing.downPaymentPct != null
+      ? String(Math.round(listing.listPrice * listing.downPaymentPct / 100))
+      : '',
+    maintenanceMode: 'flat',
+    annualMaintenance: listing.annualMaintenance ?? '',
+    maintenancePerFt: '',
+    customName: editingCustom?.name || '',
+    customAmount: editingCustom?.annualCost ?? '',
+  });
+
+  useEffect(() => {
+    if (!boatMode || marinasLoaded) return;
+    const load = async () => {
+      try {
+        const data = await api.marinas.list();
+        setMarinas(data.marinas);
+      } catch { /* ignore */ }
+      setMarinasLoaded(true);
+    };
+    load();
+  }, [api, boatMode, marinasLoaded]);
+
+  const handleChange = (e) => {
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  };
+
+  const handleSave = () => {
+    const updates = {};
+
+    if (mode === 'loan') {
+      if (form.dpMode === 'dollars' && form.downPaymentDollars && listing.listPrice) {
+        updates.downPaymentPct = Math.round((Number(form.downPaymentDollars) / listing.listPrice) * 10000) / 100;
+      } else {
+        updates.downPaymentPct = form.downPaymentPct !== '' ? Number(form.downPaymentPct) : null;
+      }
+      updates.interestRate = form.interestRate !== '' ? Number(form.interestRate) : null;
+      updates.loanTermYears = form.loanTermYears ? Number(form.loanTermYears) : null;
+    } else if (mode === 'maintenance') {
+      if (form.maintenanceMode === 'per_ft' && form.maintenancePerFt && listing.lengthFt) {
+        updates.annualMaintenance = Math.round(Number(form.maintenancePerFt) * listing.lengthFt);
+      } else if (form.annualMaintenance) {
+        updates.annualMaintenance = Number(form.annualMaintenance);
+      }
+    } else if (mode === 'marina') {
+      updates.marinaId = form.marinaId || null;
+      updates.preferredSlipIndex = form.slipIndex !== '' ? Number(form.slipIndex) : null;
+    } else if (mode === 'insurance') {
+      updates.annualInsurance = form.annualInsurance ? Number(form.annualInsurance) : null;
+    } else if (mode === 'tax') {
+      updates.annualTax = form.annualTax ? Number(form.annualTax) : null;
+    } else if (mode === 'custom') {
+      if (form.customName.trim() && form.customAmount) {
+        const current = Array.isArray(listing.additionalCosts) ? [...listing.additionalCosts] : [];
+        const item = { name: form.customName.trim(), annualCost: Number(form.customAmount) };
+        if (editingCustomIndex != null && editingCustomIndex < current.length) {
+          current[editingCustomIndex] = item;
+        } else {
+          current.push(item);
+        }
+        updates.additionalCosts = current;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      onSave(updates);
+    }
+    onClose();
+  };
+
+  const inputClass = 'w-full rounded-md border border-pine-300 px-3 py-2 text-sm';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-pine-900">Carrying cost</h3>
+
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {[
+            { id: 'loan', label: 'Loan' },
+            { id: 'maintenance', label: 'Maintenance' },
+            ...(boatMode ? [{ id: 'marina', label: 'Marina + slip' }] : []),
+            { id: 'insurance', label: 'Insurance' },
+            { id: 'tax', label: 'Tax' },
+            { id: 'custom', label: 'Other' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMode(tab.id)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${
+                mode === tab.id
+                  ? 'bg-pine-800 text-white'
+                  : 'bg-pine-100 text-pine-700 hover:bg-pine-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {mode === 'loan' && (() => {
+            const dpPct = form.dpMode === 'dollars' && form.downPaymentDollars && listing.listPrice
+              ? Number(form.downPaymentDollars) / listing.listPrice * 100
+              : form.downPaymentPct !== '' ? Number(form.downPaymentPct) : null;
+            const dpDollars = form.dpMode === 'pct' && form.downPaymentPct !== '' && listing.listPrice
+              ? Math.round(listing.listPrice * Number(form.downPaymentPct) / 100)
+              : form.downPaymentDollars !== '' ? Number(form.downPaymentDollars) : null;
+
+            return (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-pine-800">Down payment</label>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-1.5 text-sm text-pine-700">
+                      <input type="radio" name="dpMode" value="pct" checked={form.dpMode === 'pct'} onChange={handleChange} />
+                      %
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm text-pine-700">
+                      <input type="radio" name="dpMode" value="dollars" checked={form.dpMode === 'dollars'} onChange={handleChange} />
+                      $
+                    </label>
+                  </div>
+                  {form.dpMode === 'pct' ? (
+                    <input name="downPaymentPct" type="number" step="0.1" min="0" max="100" value={form.downPaymentPct} onChange={handleChange} className={`mt-1.5 ${inputClass}`} placeholder="e.g. 20" autoFocus />
+                  ) : (
+                    <input name="downPaymentDollars" type="number" min="0" value={form.downPaymentDollars} onChange={handleChange} className={`mt-1.5 ${inputClass}`} placeholder="e.g. 15000" autoFocus />
+                  )}
+                  {form.dpMode === 'pct' && dpDollars != null && listing.listPrice && (
+                    <p className="mt-1 text-xs text-pine-500">= {formatCurrency(dpDollars)}</p>
+                  )}
+                  {form.dpMode === 'dollars' && dpPct != null && (
+                    <p className="mt-1 text-xs text-pine-500">= {dpPct.toFixed(1)}%</p>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-pine-800">Interest rate (%)</label>
+                  <input name="interestRate" type="number" step="0.01" min="0" value={form.interestRate} onChange={handleChange} className={inputClass} placeholder="e.g. 7.5" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-pine-800">Loan term (years)</label>
+                  <input name="loanTermYears" type="number" min="1" max="30" value={form.loanTermYears} onChange={handleChange} className={inputClass} placeholder="e.g. 15" />
+                </div>
+                {listing.listPrice && dpDollars != null && form.interestRate && form.loanTermYears && (() => {
+                  const loan = listing.listPrice - dpDollars;
+                  if (loan <= 0) return null;
+                  const r = Number(form.interestRate) / 100 / 12;
+                  const n = Number(form.loanTermYears) * 12;
+                  const mo = r > 0 ? Math.round(loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1)) : Math.round(loan / n);
+                  return (
+                    <p className="text-sm text-pine-600">
+                      {formatCurrency(dpDollars)} down → finance {formatCurrency(loan)} → {formatCurrency(mo)}/mo
+                    </p>
+                  );
+                })()}
+              </>
+            );
+          })()}
+
+          {mode === 'maintenance' && (
+            <>
+              <div className="flex gap-3">
+                <label className="flex items-center gap-1.5 text-sm text-pine-700">
+                  <input type="radio" name="maintenanceMode" value="flat" checked={form.maintenanceMode === 'flat'} onChange={handleChange} />
+                  Flat $/yr
+                </label>
+                {boatMode && listing.lengthFt && (
+                  <label className="flex items-center gap-1.5 text-sm text-pine-700">
+                    <input type="radio" name="maintenanceMode" value="per_ft" checked={form.maintenanceMode === 'per_ft'} onChange={handleChange} />
+                    $/ft/yr
+                  </label>
+                )}
+              </div>
+              {form.maintenanceMode === 'flat' ? (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-pine-800">Annual maintenance ($)</label>
+                  <input name="annualMaintenance" type="number" value={form.annualMaintenance} onChange={handleChange} className={inputClass} placeholder="e.g. 3000" autoFocus />
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-pine-800">$/ft/year</label>
+                  <input name="maintenancePerFt" type="number" step="1" value={form.maintenancePerFt} onChange={handleChange} className={inputClass} placeholder="e.g. 100" autoFocus />
+                  {form.maintenancePerFt && listing.lengthFt && (
+                    <p className="mt-1 text-sm text-pine-600">
+                      = {formatCurrency(Math.round(Number(form.maintenancePerFt) * listing.lengthFt))}/yr for {listing.lengthFt} ft boat
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {mode === 'marina' && (() => {
+            const selectedMarina = marinas.find((m) => m.id === form.marinaId);
+            const slips = Array.isArray(selectedMarina?.slipOptions) ? selectedMarina.slipOptions : [];
+            return (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-pine-800">Marina</label>
+                  <select
+                    name="marinaId"
+                    value={form.marinaId}
+                    onChange={(e) => setForm((f) => ({ ...f, marinaId: e.target.value, slipIndex: '' }))}
+                    className={inputClass}
+                  >
+                    <option value="">No marina</option>
+                    {marinas.map((m) => (<option key={m.id} value={m.id}>{m.name}</option>))}
+                  </select>
+                </div>
+                {slips.length > 0 && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-pine-800">Slip option</label>
+                    {slips.map((opt, i) => {
+                      const rate = opt.feeType === 'per_ft'
+                        ? `${formatCurrency(Number(opt.feeAmount))}/ft`
+                        : formatCurrency(Number(opt.feeAmount));
+                      const period = { monthly: '/mo', seasonal: '/season', annual: '/yr' }[opt.feePeriod] || '';
+                      let annual = null;
+                      if (opt.feeAmount != null) {
+                        const base = opt.feeType === 'per_ft' ? Number(opt.feeAmount) * (listing.lengthFt || 36) : Number(opt.feeAmount);
+                        annual = (opt.feePeriod === 'annual' || opt.feePeriod === 'seasonal') ? Math.round(base) : Math.round(base * 12);
+                      }
+                      return (
+                        <label key={i} className="mt-1.5 flex items-start gap-2.5 rounded-lg border border-pine-200 p-3 text-sm hover:bg-pine-50 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="slipIndex"
+                            value={i}
+                            checked={String(form.slipIndex) === String(i)}
+                            onChange={handleChange}
+                            className="mt-0.5 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-pine-900">{opt.name}</p>
+                            <p className="mt-0.5 text-pine-600">
+                              {rate}{period}
+                              {annual != null && (
+                                <span className="text-pine-500">
+                                  {' '}· ≈ {formatCurrency(annual)}/yr{opt.feeType === 'per_ft' && listing.lengthFt ? ` for ${listing.lengthFt}'` : ''}
+                                </span>
+                              )}
+                            </p>
+                            {opt.notes && <p className="mt-0.5 text-xs text-pine-400">{opt.notes}</p>}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                {slips.length === 0 && form.marinaId && (
+                  <p className="text-xs text-pine-500">This marina has no slip options configured. Winter storage will still be applied.</p>
+                )}
+              </>
+            );
+          })()}
+
+          {mode === 'insurance' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-pine-800">Annual insurance ($)</label>
+              <input name="annualInsurance" type="number" value={form.annualInsurance} onChange={handleChange} className={inputClass} placeholder="e.g. 1200" autoFocus />
+            </div>
+          )}
+
+          {mode === 'tax' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-pine-800">Annual tax ($)</label>
+              <input name="annualTax" type="number" value={form.annualTax} onChange={handleChange} className={inputClass} placeholder="e.g. 500" autoFocus />
+            </div>
+          )}
+
+          {mode === 'custom' && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-pine-800">Name</label>
+                <input name="customName" value={form.customName} onChange={handleChange} className={inputClass} placeholder="e.g. Bottom paint, Haul-out" autoFocus />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-pine-800">Annual cost ($)</label>
+                <input name="customAmount" type="number" value={form.customAmount} onChange={handleChange} className={inputClass} placeholder="e.g. 2000" />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onClose} className="rounded-md border border-pine-200 px-4 py-2.5 text-sm text-pine-700 hover:bg-pine-50">Cancel</button>
+          <button type="button" onClick={handleSave} className="rounded-md bg-pine-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-pine-900">Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api }) {
+  const cc = listing.carryingCost;
+  if (!cc) return null;
+
+  const [modalTab, setModalTab] = useState(null);
+
+  const hasLoan = cc.loanPaymentMonthly != null;
+  const hasAnyCost = cc.totalAnnual != null;
+  const hasFinancingInputs = listing.downPaymentPct != null || listing.interestRate != null;
+
+  if (!hasAnyCost && !canEdit) return null;
+
+  const rows = [];
+
+  if (hasLoan) {
+    rows.push({
+      key: 'loan',
+      label: 'Loan payment',
+      monthly: cc.loanPaymentMonthly,
+      annual: cc.loanPaymentAnnual,
+      note: `${listing.downPaymentPct}% down · ${listing.interestRate}% · ${listing.loanTermYears}yr`,
+      editTab: 'loan',
+      onRemove: () => onUpdate({ downPaymentPct: null, interestRate: null, loanTermYears: null }),
+    });
+  }
+
+  if (boatMode && cc.slipAnnual != null) {
+    rows.push({ key: 'slip', label: cc.slipOptionName ? `Slip (${cc.slipOptionName})` : 'Slip fees', monthly: Math.round(cc.slipAnnual / 12), annual: cc.slipAnnual, editTab: 'marina',
+      onRemove: () => onUpdate({ marinaId: null, preferredSlipIndex: null }),
+    });
+  }
+
+  if (boatMode && cc.winterStorage != null) {
+    rows.push({ key: 'winter', label: 'Winter storage', monthly: null, annual: cc.winterStorage, editTab: 'marina',
+      onRemove: () => onUpdate({ marinaId: null, preferredSlipIndex: null }),
+    });
+  }
+
+  if (cc.insurance != null) {
+    rows.push({ key: 'insurance', label: 'Insurance', monthly: Math.round(cc.insurance / 12), annual: cc.insurance, editTab: 'insurance',
+      onRemove: () => onUpdate({ annualInsurance: null }),
+    });
+  }
+  if (cc.tax != null) {
+    rows.push({ key: 'tax', label: 'Tax', monthly: Math.round(cc.tax / 12), annual: cc.tax, editTab: 'tax',
+      onRemove: () => onUpdate({ annualTax: null }),
+    });
+  }
+  if (cc.maintenance != null) {
+    rows.push({ key: 'maintenance', label: 'Maintenance', monthly: Math.round(cc.maintenance / 12), annual: cc.maintenance, editTab: 'maintenance',
+      onRemove: () => onUpdate({ annualMaintenance: null }),
+    });
+  }
+
+  if (cc.customCosts?.length > 0) {
+    cc.customCosts.forEach((c, i) => {
+      rows.push({
+        key: `custom-${i}`,
+        label: c.name,
+        monthly: Math.round(Number(c.annualCost) / 12),
+        annual: Number(c.annualCost),
+        editTab: `custom-${i}`,
+        onRemove: () => {
+          const current = Array.isArray(listing.additionalCosts) ? [...listing.additionalCosts] : [];
+          current.splice(i, 1);
+          onUpdate({ additionalCosts: current.length > 0 ? current : null });
+        },
+      });
+    });
+  }
+
+  return (
+    <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-pine-900">Carrying costs</h2>
+          {boatMode && listing.marina && (
+            <Link to={searchPath(searchId, `/marinas/${listing.marina.id}`)} className="text-sm text-pine-500 hover:text-pine-900">
+              · {listing.marina.name}
+            </Link>
+          )}
+        </div>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setModalTab('maintenance')}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-pine-200 text-pine-600 hover:bg-pine-50 hover:text-pine-900"
+            title="Add cost"
+            aria-label="Add cost"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {hasLoan && cc.downPaymentAmount != null && (
+        <p className="mt-1 flex flex-wrap gap-x-1 text-sm text-pine-500">
+          <span>{formatCurrency(listing.listPrice)}</span>
+          <span>→ {formatCurrency(cc.downPaymentAmount)} down</span>
+          <span>→ finance {formatCurrency(cc.loanAmount)}</span>
+        </p>
+      )}
+
+      {rows.length > 0 ? (
+        <div className="mt-3 space-y-0 divide-y divide-pine-100">
+          {rows.map((row) => {
+            const canClick = canEdit && row.editTab;
+            const remove = row.onRemove || (row.removable != null ? () => handleRemoveCustomCost(row.removable) : null);
+            return (
+              <div
+                key={row.key}
+                className={`flex items-center gap-2 py-2.5 ${canClick ? 'cursor-pointer hover:bg-pine-50/50 -mx-2 px-2 rounded-lg' : ''}`}
+                onClick={canClick ? () => setModalTab(row.editTab) : undefined}
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm text-pine-700">{row.label}</span>
+                  {row.note && <span className="ml-1.5 text-xs text-pine-400 sm:inline block">{row.note}</span>}
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className="text-sm font-medium tabular-nums text-pine-900">
+                    {row.monthly != null ? formatCurrency(row.monthly) : '—'}<span className="text-pine-400">/mo</span>
+                  </span>
+                  <span className="ml-3 hidden text-sm tabular-nums text-pine-600 sm:inline">
+                    {row.annual != null ? formatCurrency(row.annual) : '—'}<span className="text-pine-400">/yr</span>
+                  </span>
+                </div>
+                {canEdit && remove && (
+                  <button
+                    type="button"
+                    className="shrink-0 cursor-pointer p-2 text-pine-300 hover:text-red-500"
+                    title="Remove"
+                    aria-label={`Remove ${row.label}`}
+                    onClick={(e) => { e.stopPropagation(); remove(); }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2 border-t-2 border-pine-200 pt-2.5">
+            <span className="min-w-0 flex-1 text-sm font-semibold text-pine-900">Total</span>
+            <div className="shrink-0 text-right">
+              <span className="text-sm font-semibold tabular-nums text-pine-900">
+                {cc.totalMonthly != null ? formatCurrency(cc.totalMonthly) : '—'}<span className="font-normal text-pine-400">/mo</span>
+              </span>
+              <span className="ml-3 hidden text-sm font-semibold tabular-nums text-pine-900 sm:inline">
+                {cc.totalAnnual != null ? formatCurrency(cc.totalAnnual) : '—'}<span className="font-normal text-pine-400">/yr</span>
+              </span>
+            </div>
+            {canEdit && <span className="w-6 shrink-0" />}
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-pine-500">
+          {canEdit ? 'Hit + to add maintenance, marina, insurance, or other costs.' : 'No cost data entered yet.'}
+        </p>
+      )}
+
+      {canEdit && !hasFinancingInputs && listing.listPrice && (
+        <div className="mt-3">
+          <button
+            type="button"
+            className="text-xs text-pine-500 hover:text-pine-800"
+            onClick={() => onUpdate(boatMode ? { downPaymentPct: 20, interestRate: 7.5, loanTermYears: 15 } : { downPaymentPct: 20, interestRate: 7, loanTermYears: 30 })}
+          >
+            + Add typical {boatMode ? 'boat loan' : 'mortgage'}
+          </button>
+        </div>
+      )}
+
+      {modalTab && (
+        <AddCostModal boatMode={boatMode} listing={listing} api={api} initialTab={modalTab} onSave={onUpdate} onClose={() => setModalTab(null)} />
+      )}
+    </section>
+  );
+}
+
 export default function ListingDetail() {
   const { id } = useParams();
   const searchId = useSearchId();
@@ -428,6 +946,7 @@ export default function ListingDetail() {
         lake: data.listing.lake ?? current?.lake,
         boatMake: data.listing.boatMake ?? current?.boatMake,
         boatModel: data.listing.boatModel ?? current?.boatModel,
+        marina: data.listing.marina !== undefined ? data.listing.marina : current?.marina,
       }));
       if (refreshEstimate || partial.listPrice !== undefined || partial.lengthFt !== undefined
         || partial.yearBuilt !== undefined || partial.propulsion !== undefined
@@ -976,6 +1495,12 @@ export default function ListingDetail() {
                 )
               )}
 
+              {listing.marina && (
+                <Link to={searchPath(searchId, `/marinas/${listing.marina.id}`)}>
+                  <FeaturePill>{listing.marina.name}</FeaturePill>
+                </Link>
+              )}
+
               {listing.visited && (
                 <FeaturePill>Inspected</FeaturePill>
               )}
@@ -1014,30 +1539,27 @@ export default function ListingDetail() {
         )}
       </section>
 
-      {listing.photoUrls?.length > 0 && (
-        <div className="mt-6">
-          <PhotoGallery photoUrls={listing.photoUrls} />
+      {(listing.photoUrls?.length > 0 || priceEstimate) && (
+        <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-5">
+          <div className="order-2 min-w-0 lg:order-1 lg:col-span-2">
+            <PriceEstimate data={priceEstimate} />
+          </div>
+          {listing.photoUrls?.length > 0 && (
+            <div className="order-1 min-w-0 lg:order-2 lg:col-span-3">
+              <PhotoGallery photoUrls={listing.photoUrls} />
+            </div>
+          )}
         </div>
       )}
 
-      <div className={`mt-6 grid gap-6 ${boatMode ? '' : 'lg:grid-cols-5'}`}>
-        <div className={`space-y-6 ${boatMode ? '' : 'lg:col-span-3'}`}>
-          <PriceEstimate data={priceEstimate} />
+      <div className={`mt-6 grid min-w-0 gap-6 ${boatMode ? '' : 'lg:grid-cols-5'}`}>
+        <div className={`min-w-0 space-y-6 ${boatMode ? '' : 'lg:col-span-3'}`}>
 
           {boatMode && (boatModelHasSpecs(listing.boatModel) || listing.modelCheck) && (
-            <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
-              <BoatModelSpecs
-                model={listing.boatModel}
-                title={listing.boatModel?.name || 'Model specs'}
-                titleTo={
-                  listing.boatMakeId && listing.boatModelId
-                    ? searchPath(searchId, `/makes/${listing.boatMakeId}/models/${listing.boatModelId}`)
-                    : null
-                }
-                modelCheck={listing.modelCheck}
-                compact
-              />
-            </section>
+            <CollapsibleModelSpecs
+              listing={listing}
+              searchId={searchId}
+            />
           )}
 
           {boatMode && listing.boatModelId && (
@@ -1049,6 +1571,15 @@ export default function ListingDetail() {
               onListingUpdate={applyListingUpdate}
             />
           )}
+
+          <CarryingCostCard
+            listing={listing}
+            boatMode={boatMode}
+            canEdit={canEdit}
+            searchId={searchId}
+            onUpdate={applyListingUpdate}
+            api={api}
+          />
 
           <Card className="!p-0 overflow-hidden">
             <UnifiedEvaluation
@@ -1103,7 +1634,7 @@ export default function ListingDetail() {
         </div>
 
         {!boatMode && (
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           <Card className="h-fit">
               <div className="mt-1">
                 <LocationDriveTime
