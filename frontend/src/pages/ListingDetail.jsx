@@ -429,7 +429,7 @@ export default function ListingDetail() {
                   driveTimeMinutes={listing.driveTimeMinutes}
                   driveDistanceMiles={listing.driveDistanceMiles}
                   onGeocode={canEdit && listing.latitude == null ? handleGeocodeListing : undefined}
-                  onDriveTime={canEdit ? handleListingDriveTime : undefined}
+                  onDriveTime={canEdit && !boatMode ? handleListingDriveTime : undefined}
                   geocoding={geocoding}
                   calculating={calculatingDriveTime}
                   error={locationError}
@@ -445,6 +445,7 @@ export default function ListingDetail() {
                     destinationLabel={title}
                     destinationSublabel={listingAddressLine}
                     destinationHref={searchPath(searchId, `/listings/${listing.id}`)}
+                    isLoadingRoute={!boatMode}
                   />
                 </div>
               )}
@@ -486,7 +487,6 @@ export default function ListingDetail() {
             <dl className="mt-4 space-y-3 text-sm">
               {listing.sourceUrl && (
                 <div>
-                  <dt className="text-pine-500">Listing URL</dt>
                   <dd className="mt-1 break-all">
                     <a
                       href={listing.sourceUrl}
@@ -501,7 +501,7 @@ export default function ListingDetail() {
               )}
               {listing.mlsNumber && (
                 <div>
-                  <dt className="text-pine-500">MLS</dt>
+                  <dt className="text-pine-500">{isBoatSearch(assetType) ? 'YachtWorld ID' : 'MLS'}</dt>
                   <dd className="text-pine-900">{listing.mlsNumber}</dd>
                 </div>
               )}

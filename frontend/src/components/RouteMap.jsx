@@ -14,6 +14,7 @@ export default function RouteMap({
   radiusMiles,
   height,
   className = '',
+  isLoadingRoute = true
 }) {
   const searchId = useSearchId();
   const api = useSearchAPI();
@@ -165,7 +166,7 @@ export default function RouteMap({
       {routeError && (
         <p className="mt-2 text-xs text-amber-700">{routeError}</p>
       )}
-      {!poiMarker && destinationMarker && (
+      {!poiMarker && destinationMarker && !loadingRoute && isLoadingRoute && (
         <p className="mt-2 text-xs text-pine-500">
           Add a location in Settings to see the driving route.
         </p>

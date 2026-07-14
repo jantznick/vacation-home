@@ -21,12 +21,8 @@ export default function LocationDriveTime({
   const hasCoordinates = latitude != null && longitude != null;
   const mapUrl = mapsUrl(latitude, longitude);
 
-  const wrapperClass = embedded
-    ? 'border-t border-pine-100 pt-4'
-    : 'rounded-lg border border-pine-200 p-4';
-
   return (
-    <div className={wrapperClass}>
+    <div className="border-t border-pine-100 pt-4">
       <h3 className="text-sm font-medium text-pine-900">{locationLabel}</h3>
 
       {addressLine && (
