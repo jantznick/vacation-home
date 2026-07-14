@@ -33,6 +33,7 @@ import {
 } from '../lib/listingBrowse.js';
 import { normalizePropulsion, supportsRegions } from '../lib/assetTypes.js';
 import { ensureBoatMakeAndModel } from '../lib/boatMakes.js';
+import { boatModelSpecSelect } from '../lib/boatModelSpecs.js';
 
 const router = express.Router();
 
@@ -51,16 +52,7 @@ const listingInclude = {
     },
   },
   boatModel: {
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      pros: true,
-      cons: true,
-      notes: true,
-      makeId: true,
-    },
+    select: boatModelSpecSelect,
   },
 };
 

@@ -49,6 +49,8 @@ Boat fields:
 
 `BoatMake` / `BoatModel` hold description, pros, cons, and notes that cascade onto boat detail pages.
 
+`BoatModel` also stores structured encyclopedia specs (LOA, beam, draft, displacement, sail area, ratios, designer, builder, engine, tankage, sailboatdata URL, etc.) for readable model pages and future YachtWorld listing cross-checks.
+
 `regionId` is **optional**. Required for home listings; null for boats.
 
 Derived API field for boats: `pricePerFoot` when price + length exist.
@@ -70,7 +72,7 @@ Boat comps use length (± ~20%) and matching propulsion when present. `$/ft` is 
 | Create Search | Pick Homes or Boats | Same |
 | Dashboard | Region stats + home framing | Category pros/cons + boat stats |
 | Add listing | Region required; Zillow import | YachtWorld URL + page-source paste; no region; optional nickname |
-| Makes & models | — | Search-scoped make → model notes (pros/cons/description); cascade onto boat detail |
+| Makes & models | — | Search-scoped make → model notes; **Sailboatdata** import on model pages (URL + page-source paste) |
 | Estimator | Dream home form | Length / year / propulsion |
 
 ## Roadmap (later)
@@ -78,8 +80,9 @@ Boat comps use length (± ~20%) and matching propulsion when present. `$/ft` is 
 1. More reliable YachtWorld fetch (when bot protection allows)
 2. Propulsion as pricing segment / one-hot feature when sample size allows
 3. Boat “regions” or marinas
-4. RV asset type + fields
-5. Saas templates for default category pros/cons per type
+4. Boat “regions” or marinas
+5. RV asset type + fields
+6. Saas templates for default category pros/cons per type
 
 ## Customer experience rules
 

@@ -6,6 +6,7 @@ import {
 import { createListingSnapshot } from '../../lib/listingSnapshots.js';
 import { previewListingFromUrl } from '../ingest/index.js';
 import { retrainAfterListingChange } from '../pricing/index.js';
+import { boatModelSpecSelect } from '../../lib/boatModelSpecs.js';
 
 const listingInclude = {
   region: { select: { id: true, name: true, slug: true } },
@@ -22,16 +23,7 @@ const listingInclude = {
     },
   },
   boatModel: {
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      pros: true,
-      cons: true,
-      notes: true,
-      makeId: true,
-    },
+    select: boatModelSpecSelect,
   },
 };
 

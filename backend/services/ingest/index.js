@@ -11,6 +11,10 @@ import {
   isYachtWorldUrl,
   parseYachtWorldFromPaste,
 } from './yachtworld.js';
+import {
+  fetchSailboatDataFromUrl,
+  parseSailboatDataHtml,
+} from './sailboatdata.js';
 
 export function detectSourceSite(urlString) {
   if (isYachtWorldUrl(urlString)) {
@@ -94,6 +98,14 @@ export async function previewDnrLakeFromUrl(urlOrWbic) {
 
 export function previewDnrLakeFromHtml({ wbic, overviewHtml, factsHtml }) {
   return importDnrLakeFromHtml({ wbic, overviewHtml, factsHtml });
+}
+
+export async function previewSailboatDataFromUrl(urlString) {
+  return fetchSailboatDataFromUrl(urlString);
+}
+
+export function previewSailboatDataFromHtml({ html, sourceUrl = null }) {
+  return parseSailboatDataHtml(html, { sourceUrl });
 }
 
 export { parseWbicFromUrl, isZillapiConfigured };

@@ -4,6 +4,8 @@ import {
   previewDnrLakeFromUrl,
   previewListingFromPaste,
   previewListingFromUrl,
+  previewSailboatDataFromHtml,
+  previewSailboatDataFromUrl,
 } from '../services/ingest/index.js';
 
 const router = express.Router();
@@ -117,6 +119,61 @@ router.post('/dnr-lake/preview-paste', async (req, res) => {
     console.error('DNR lake paste preview error:', error);
     res.status(422).json({
       error: error.message || 'Failed to parse pasted DNR lake HTML',
+    });
+  }
+});
+
+router.post('/sailboatdata/preview', async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url?.trim()) {
+      return res.status(400).json({ error: 'Sailboatdata URL is required' });
+    }
+
+    const result = await previewSailboatDataFromUrl(url.trim());
+
+    res.json({
+      fields: result.fields,
+      warnings: result.warnings,
+      source: result.source,
+      fetchMethod: result.fetchMethod,
+      needsPaste: Boolean(result.needsPaste),
+    });
+  } catch (error) {
+    console.error('Sailboatdata preview error:', error);
+    res.status(422).json({
+      error: error.message || 'Failed to import from sailboatdata',
+      needsPaste: Boolean(error.needsPaste),
+    });
+  }
+});
+
+router.post('/sailboatdata/preview-paste', async (req, res) => {
+  try {
+    const { url, pastedData } = req.body;
+
+    if (!pastedData?.trim()) {
+      return res.status(400).json({ error: 'Pasted page source is required' });
+    }
+
+    const result = previewSailboatDataFromHtml({
+      html: pastedData,
+      sourceUrl: url?.trim() || null,
+    });
+
+    res.json({
+      fields: result.fields,
+      warnings: result.warnings,
+      source: result.source,
+      fetchMethod: result.fetchMethod,
+      needsPaste: false,
+    });
+  } catch (error) {
+    console.error('Sailboatdata paste preview error:', error);
+    res.status(422).json({
+      error: error.message || 'Failed to parse sailboatdata HTML',
+      needsPaste: Boolean(error.needsPaste),
     });
   }
 });

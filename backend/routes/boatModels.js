@@ -5,6 +5,7 @@ import { slugify } from '../lib/slug.js';
 import { uniqueBoatModelSlug } from '../lib/boatMakes.js';
 import { applyBrowseListingFilter } from '../lib/listingBrowse.js';
 import { serializeListings } from '../lib/listingHelpers.js';
+import { pickBoatModelPatch } from '../lib/boatModelSpecs.js';
 
 const router = express.Router();
 
@@ -61,20 +62,25 @@ router.patch('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Model not found' });
     }
 
-    const { name, description, pros, cons, notes } = req.body;
-    const data = {};
+    const data = pickBoatModelPatch(req.body);
 
-    if (name !== undefined) {
-      if (!name?.trim()) {
+    if (data.name !== undefined) {
+      if (!data.name?.trim()) {
         return res.status(400).json({ error: 'Name is required' });
       }
-      data.name = name.trim();
+      data.name = data.name.trim();
       data.slug = await uniqueBoatModelSlug(prisma, existing.makeId, slugify(data.name), existing.id);
     }
-    if (description !== undefined) data.description = description || null;
-    if (pros !== undefined) data.pros = pros || null;
-    if (cons !== undefined) data.cons = cons || null;
-    if (notes !== undefined) data.notes = notes || null;
+
+    for (const key of ['description', 'pros', 'cons', 'notes', 'hullType', 'rigType', 'construction', 'designer', 'builder', 'engineMake', 'engineType', 'sailboatDataUrl']) {
+      if (data[key] !== undefined && typeof data[key] === 'string') {
+        data[key] = data[key].trim() || null;
+      }
+    }
+
+    if (data.sailboatDataFetchedAt !== undefined && data.sailboatDataFetchedAt) {
+      data.sailboatDataFetchedAt = new Date(data.sailboatDataFetchedAt);
+    }
 
     const model = await prisma.boatModel.update({
       where: { id: existing.id },

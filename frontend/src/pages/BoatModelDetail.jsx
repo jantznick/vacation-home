@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
-import Card from '../components/Card';
 import ClickableCard from '../components/ClickableCard';
 import ConfirmModal from '../components/ConfirmModal';
 import InlineEditable from '../components/InlineEditable';
 import EditableLineList from '../components/EditableLineList';
+import SailboatDataImport, { mergeSailboatDataIntoModel } from '../components/SailboatDataImport';
+import BoatModelSpecs, { boatModelHasSpecs } from '../components/BoatModelSpecs';
 import useSearchAccess from '../hooks/useSearchAccess';
 import { formatCurrency, statusLabel, LISTING_STATUSES } from '../lib/format';
 import { formatBoatTitle } from '../lib/boatTitle';
-import { showError } from '../lib/toast';
+import { showError, showSuccess } from '../lib/toast';
 import { parseLineList } from '../lib/assetTypes';
+import { buildBoatModelHighlights } from '../lib/boatModelSpecs';
 
 function CheckIcon() {
   return (
@@ -185,6 +187,15 @@ export default function BoatModelDetail() {
   const makeHasNotes = Boolean(
     model.make?.description || makePros.length || makeCons.length || model.make?.notes,
   );
+  const highlights = buildBoatModelHighlights(model);
+  const summary = [model.rigType, model.hullType].filter(Boolean).join(' · ');
+  const builtLine = [
+    model.firstBuilt && model.lastBuilt
+      ? `${model.firstBuilt}–${model.lastBuilt}`
+      : model.firstBuilt || model.lastBuilt,
+    model.builtCount != null ? `${model.builtCount.toLocaleString()} built` : null,
+    model.designer,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div className="pb-10">
@@ -236,7 +247,7 @@ export default function BoatModelDetail() {
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      <section className="relative overflow-hidden rounded-2xl border border-pine-200 bg-gradient-to-br from-white via-pine-50/40 to-sky-50/50 p-5 shadow-sm sm:p-6">
+      <section className="relative overflow-hidden rounded-2xl border border-pine-200 bg-gradient-to-br from-white via-pine-50/40 to-sky-50/50 p-5 shadow-sm sm:p-7">
         <p className="text-sm text-pine-600">{model.make?.name}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-pine-950 sm:text-3xl">
           <InlineEditable
@@ -255,11 +266,55 @@ export default function BoatModelDetail() {
             }}
           />
         </h1>
-        <p className="mt-1 text-sm text-pine-600">Model notes cascade onto matching boats.</p>
+        {summary && <p className="mt-2 text-sm text-pine-700 sm:text-base">{summary}</p>}
+        {builtLine && <p className="mt-1 text-sm text-pine-500">{builtLine}</p>}
+
+        {highlights.length > 0 && (
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-pine-200/80 pt-5 sm:grid-cols-4">
+            {highlights.map((item) => (
+              <div key={item.label}>
+                <p className="text-xs text-pine-500">{item.label}</p>
+                <p className="mt-0.5 text-lg font-semibold tabular-nums tracking-tight text-pine-950 sm:text-xl">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
+      {canEdit && (
+        <div className="mt-6">
+          <SailboatDataImport
+            defaultUrl={model.sailboatDataUrl || ''}
+            onImport={async (fields) => {
+              const patch = mergeSailboatDataIntoModel(model, fields);
+              if (Object.keys(patch).length === 0) {
+                showError('Nothing new to import.');
+                return;
+              }
+              setModel((current) => ({ ...current, ...patch }));
+              await applyUpdate(patch);
+              showSuccess('Imported from Sailboatdata.');
+            }}
+          />
+        </div>
+      )}
+
+      {boatModelHasSpecs(model) && (
+        <section className="mt-8">
+          <BoatModelSpecs
+            model={model}
+            title="Full specs"
+            showSummary={false}
+            showHighlights={false}
+          />
+        </section>
+      )}
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-pine-950">Your notes</h2>
           <NotesEditor
             entity={model}
             canEdit={canEdit}
@@ -268,12 +323,12 @@ export default function BoatModelDetail() {
               return applyUpdate(partial);
             }}
           />
-        </Card>
+        </section>
 
         {model.make && makeHasNotes && (
-          <Card>
+          <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-medium text-pine-900">{model.make.name}</h2>
+              <h2 className="text-lg font-semibold text-pine-950">{model.make.name}</h2>
               <Link
                 to={searchPath(searchId, `/makes/${makeId}`)}
                 className="text-sm font-medium text-pine-700 hover:text-pine-950"
@@ -282,21 +337,21 @@ export default function BoatModelDetail() {
               </Link>
             </div>
             <NotesEditor entity={model.make} canEdit={false} onSave={() => {}} />
-          </Card>
+          </section>
         )}
       </div>
 
-      <Card className="mt-6">
-        <h2 className="text-lg font-medium text-pine-900">Boats of this model</h2>
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-pine-950">Boats of this model</h2>
         {(model.listings || []).length === 0 ? (
           <p className="mt-3 text-sm text-pine-600">No boats linked yet.</p>
         ) : (
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 divide-y divide-pine-100 rounded-2xl border border-pine-200 bg-white shadow-sm">
             {model.listings.map((listing) => (
               <ClickableCard
                 key={listing.id}
                 to={searchPath(searchId, `/listings/${listing.id}`)}
-                className="!p-3"
+                className="!rounded-none !border-0 !shadow-none !p-4 first:!rounded-t-2xl last:!rounded-b-2xl"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -313,7 +368,7 @@ export default function BoatModelDetail() {
             ))}
           </div>
         )}
-      </Card>
+      </section>
 
       {showDeleteConfirm && (
         <ConfirmModal

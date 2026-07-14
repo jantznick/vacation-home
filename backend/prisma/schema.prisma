@@ -136,16 +136,49 @@ model BoatMake {
   @@index([searchId])
 }
 
-/// Model under a make; notes cascade onto matching boat listings.
+/// Model under a make; notes + encyclopedia specs cascade onto matching boats.
 model BoatModel {
   id          String   @id @default(uuid())
   makeId      String
   name        String
   slug        String
+  /// Optional free-text overview (user notes), not for machine specs.
   description String?
   pros        String?
   cons        String?
   notes       String?
+
+  /// Encyclopedia / sailboatdata specs (imperial preferred).
+  hullType           String?
+  rigType            String?
+  loaFt              Float?
+  lwlFt              Float?
+  beamFt             Float?
+  draftFt            Float?
+  displacementLb     Float?
+  ballastLb          Float?
+  /// Ballast as percent of displacement (e.g. 29.73).
+  ballastRatio       Float?
+  sailAreaSqFt       Float?
+  construction       String?
+  designer           String?
+  builder            String?
+  firstBuilt         Int?
+  lastBuilt          Int?
+  builtCount         Int?
+  saDispl            Float?
+  dispLen            Float?
+  comfortRatio       Float?
+  capsizeRatio       Float?
+  hullSpeedKn        Float?
+  engineMake         String?
+  engineType         String?
+  engineHp           Float?
+  fuelGal            Float?
+  waterGal           Float?
+  sailboatDataUrl    String?
+  sailboatDataFetchedAt DateTime?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

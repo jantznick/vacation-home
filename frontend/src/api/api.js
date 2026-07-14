@@ -220,6 +220,16 @@ export function createSearchAPI(searchId) {
           method: 'POST',
           body: JSON.stringify({ wbic, overviewHtml, factsHtml }),
         }),
+      previewSailboatData: (url) =>
+        request(`${base}/ingest/sailboatdata/preview`, {
+          method: 'POST',
+          body: JSON.stringify({ url }),
+        }),
+      previewSailboatDataPaste: (pastedData, url = null) =>
+        request(`${base}/ingest/sailboatdata/preview-paste`, {
+          method: 'POST',
+          body: JSON.stringify({ pastedData, url }),
+        }),
     },
     maps: {
       overview: () => request(`${base}/maps/overview`),

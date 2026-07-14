@@ -13,7 +13,8 @@
     "prisma:studio": "prisma studio",
     "parse:zillow": "node scripts/parse-zillow-json.js",
     "parse:yachtworld": "node scripts/parse-yachtworld.js",
-    "parse:dnr-lake": "node scripts/parse-dnr-lake.js"
+    "parse:dnr-lake": "node scripts/parse-dnr-lake.js",
+    "parse:sailboatdata": "node scripts/parse-sailboatdata.js"
   },
   "license": "ISC",
   "dependencies": {

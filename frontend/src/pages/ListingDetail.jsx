@@ -27,6 +27,7 @@ import { formatFetchedAt } from '../lib/listingFreshness';
 import { showError, showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, parseLineList } from '../lib/assetTypes';
 import { boatDisplayName, boatMakeModelLabel } from '../lib/boatTitle';
+import BoatModelSpecs, { boatModelHasSpecs } from '../components/BoatModelSpecs';
 
 const STATUS_PILL = {
   active: 'bg-pine-100 text-pine-800',
@@ -131,9 +132,14 @@ function UnifiedEvaluation({ listing, boatMode, canEdit, searchId, onBoatChange 
   ];
 
   const descriptions = [];
-  if (listing.boatModel?.description) {
+  const modelDescription = listing.boatModel?.description;
+  if (
+    modelDescription
+    && !/LOA\s+/i.test(modelDescription)
+    && !(modelDescription.includes(' · ') && /draft|beam|disp/i.test(modelDescription))
+  ) {
     descriptions.push({
-      text: listing.boatModel.description,
+      text: modelDescription,
       sourceLabel: modelLabel,
       sourceHref: modelHref,
     });
@@ -951,6 +957,21 @@ export default function ListingDetail() {
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">
           <PriceEstimate data={priceEstimate} />
+
+          {boatMode && boatModelHasSpecs(listing.boatModel) && (
+            <section className="rounded-2xl border border-pine-200 bg-white p-5 shadow-sm">
+              <BoatModelSpecs
+                model={listing.boatModel}
+                title={listing.boatModel?.name || 'Model specs'}
+                titleTo={
+                  listing.boatMakeId && listing.boatModelId
+                    ? searchPath(searchId, `/makes/${listing.boatMakeId}/models/${listing.boatModelId}`)
+                    : null
+                }
+                compact
+              />
+            </section>
+          )}
 
           <Card className="!p-0 overflow-hidden">
             <UnifiedEvaluation
