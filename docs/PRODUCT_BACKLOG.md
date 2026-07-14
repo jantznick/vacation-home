@@ -36,7 +36,14 @@ Per-listing templates (rigging age, soft spots, saildrive seals, model-known iss
 
 ### 4. Must-haves vs nice-to-haves
 
-Search-level constraints (max draft, budget, min tankage). Quiet “fits 6/8” on each listing.
+Search-level constraints with a quiet “fits” score on listings.
+
+**Status (structured v1)**
+- `Search.mustHaves` / `niceToHaves` JSON rules (field + op + value)
+- Home and boat field catalogs (price, beds, draft, length, etc.)
+- Auto-evaluated; soft score only (no hard hide)
+- Edit in Search Settings; badge on listing list rows + detail hero with tooltip breakdown
+- Free-text criteria deferred
 
 ## Boat-specific
 

@@ -20,6 +20,8 @@ export async function loadSearchMembership(req, res, next) {
         assetType: true,
         pros: true,
         cons: true,
+        mustHaves: true,
+        niceToHaves: true,
         createdById: true,
         createdAt: true,
         updatedAt: true,

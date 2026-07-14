@@ -8,6 +8,8 @@ import Button from '../components/Button';
 import FormField from '../components/FormField';
 import ConfirmModal from '../components/ConfirmModal';
 import EditableLineList from '../components/EditableLineList';
+import CriteriaEditor from '../components/CriteriaEditor';
+import { normalizeCriteriaList } from '../lib/searchCriteria';
 import { AssetTypeBadge } from '../components/AssetTypeTabs';
 import { showError, showInviteCreated, showSuccess } from '../lib/toast';
 import useAuthStore from '../store/authStore';
@@ -156,7 +158,12 @@ export default function SearchSettings() {
     pros: null,
     cons: null,
   });
+  const [criteriaForm, setCriteriaForm] = useState({
+    mustHaves: [],
+    niceToHaves: [],
+  });
   const [savingDetails, setSavingDetails] = useState(false);
+  const [savingCriteria, setSavingCriteria] = useState(false);
 
   const syncDetailsForm = (nextSearch) => {
     setDetailsForm({
@@ -164,6 +171,10 @@ export default function SearchSettings() {
       description: nextSearch?.description || '',
       pros: nextSearch?.pros ?? null,
       cons: nextSearch?.cons ?? null,
+    });
+    setCriteriaForm({
+      mustHaves: normalizeCriteriaList(nextSearch?.mustHaves, nextSearch?.assetType || 'home'),
+      niceToHaves: normalizeCriteriaList(nextSearch?.niceToHaves, nextSearch?.assetType || 'home'),
     });
   };
 
@@ -404,6 +415,27 @@ export default function SearchSettings() {
     }
   };
 
+  const handleSaveCriteria = async (e) => {
+    e.preventDefault();
+    setSavingCriteria(true);
+    setError('');
+
+    try {
+      const data = await searchesAPI.update(searchId, {
+        mustHaves: criteriaForm.mustHaves,
+        niceToHaves: criteriaForm.niceToHaves,
+      });
+      setSearch((current) => ({ ...current, ...data.search }));
+      syncDetailsForm(data.search);
+      showSuccess('Must / nice rules saved.');
+    } catch (err) {
+      setError(err.message);
+      showError(err.message);
+    } finally {
+      setSavingCriteria(false);
+    }
+  };
+
   const isOwner = search?.role === 'owner';
   const canEdit = search?.role === 'owner' || search?.role === 'editor';
   const boatMode = isBoatSearch(search?.assetType);
@@ -478,6 +510,41 @@ export default function SearchSettings() {
           {canEdit && (
             <Button type="submit" disabled={savingDetails}>
               {savingDetails ? 'Saving...' : 'Save details'}
+            </Button>
+          )}
+        </form>
+      </Card>
+
+      <Card className="mb-6">
+        <form onSubmit={handleSaveCriteria} className="space-y-6">
+          <div>
+            <h2 className="text-lg font-medium text-pine-900">Must-haves & nice-to-haves</h2>
+            <p className="mt-1 text-sm text-pine-600">
+              Shared rules for this search. Listings get a quiet fit score from these automatically.
+            </p>
+          </div>
+
+          <CriteriaEditor
+            title="Must-haves"
+            description="Deal-breakers. Missing these shows as a warning on listings."
+            value={criteriaForm.mustHaves}
+            onChange={(mustHaves) => setCriteriaForm((current) => ({ ...current, mustHaves }))}
+            assetType={search?.assetType || 'home'}
+            disabled={!canEdit}
+          />
+
+          <CriteriaEditor
+            title="Nice-to-haves"
+            description="Preferences that raise the score when met."
+            value={criteriaForm.niceToHaves}
+            onChange={(niceToHaves) => setCriteriaForm((current) => ({ ...current, niceToHaves }))}
+            assetType={search?.assetType || 'home'}
+            disabled={!canEdit}
+          />
+
+          {canEdit && (
+            <Button type="submit" disabled={savingCriteria}>
+              {savingCriteria ? 'Saving...' : 'Save rules'}
             </Button>
           )}
         </form>

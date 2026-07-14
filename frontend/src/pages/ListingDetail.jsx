@@ -29,6 +29,7 @@ import { showError, showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, parseLineList } from '../lib/assetTypes';
 import { boatDisplayName, boatMakeModelLabel } from '../lib/boatTitle';
 import BoatModelSpecs, { boatModelHasSpecs } from '../components/BoatModelSpecs';
+import CriteriaFitBadge from '../components/CriteriaFitBadge';
 
 const STATUS_PILL = {
   active: 'bg-pine-100 text-pine-800',
@@ -369,7 +370,7 @@ export default function ListingDetail() {
   const api = useSearchAPI();
   const navigate = useNavigate();
   const { canEdit } = useSearchAccess();
-  const { assetType } = useCurrentSearch();
+  const { search, assetType } = useCurrentSearch();
   const [listing, setListing] = useState(null);
   const [snapshots, setSnapshots] = useState([]);
   const [commutes, setCommutes] = useState([]);
@@ -734,6 +735,13 @@ export default function ListingDetail() {
                 value={listing.interestLevel}
                 canEdit={canEdit}
                 onSave={(interestLevel) => applyListingUpdate({ interestLevel })}
+              />
+
+              <CriteriaFitBadge
+                listing={listing}
+                search={search}
+                assetType={assetType}
+                size="md"
               />
 
               {listing.isSoldComp && (

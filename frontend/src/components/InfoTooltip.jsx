@@ -121,7 +121,7 @@ export default function InfoTooltip({ tip, label }) {
             {title && (
               <p className="text-base font-semibold text-pine-950">{title}</p>
             )}
-            <p className="mt-2 text-sm leading-relaxed text-pine-700">{tip.body}</p>
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-pine-700">{tip.body}</p>
             <button
               type="button"
               className="mt-4 w-full rounded-lg bg-pine-800 px-3 py-2.5 text-sm font-medium text-white hover:bg-pine-900"
@@ -150,7 +150,7 @@ export default function InfoTooltip({ tip, label }) {
           {title && (
             <p className="text-sm font-semibold text-pine-950">{title}</p>
           )}
-          <p className="mt-1 text-sm leading-relaxed text-pine-700">{tip.body}</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-pine-700">{tip.body}</p>
         </div>
       ) : null,
       document.body,

@@ -19,6 +19,7 @@ import ListingPriceSignal from '../components/ListingPriceSignal';
 import { showError, showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, supportsRegions } from '../lib/assetTypes';
 import { formatBoatTitle } from '../lib/boatTitle';
+import CriteriaFitBadge from '../components/CriteriaFitBadge';
 
 function listingTitle(listing, boat) {
   if (boat) {
@@ -31,7 +32,7 @@ export default function Listings() {
   const searchId = useSearchId();
   const api = useSearchAPI();
   const { canEdit } = useSearchAccess();
-  const { assetType, loading: searchLoading } = useCurrentSearch();
+  const { search, assetType, loading: searchLoading } = useCurrentSearch();
   const boatMode = isBoatSearch(assetType);
   const homeMode = supportsRegions(assetType);
   const { label: primaryPoiLabel } = usePrimaryPoi();
@@ -334,6 +335,7 @@ export default function Listings() {
                     <p className="text-lg font-medium text-pine-900">
                       {listingTitle(listing, boatMode)}
                     </p>
+                    <CriteriaFitBadge listing={listing} search={search} assetType={assetType} />
                     {homeMode && <ListingStaleBadge listing={listing} />}
                   </div>
                   <p className="mt-1 text-sm text-pine-600">

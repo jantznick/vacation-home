@@ -15,6 +15,7 @@ import ingestRoutes from './ingest.js';
 import analysisRoutes from './analysis.js';
 import pricingModelRoutes from './pricingModels.js';
 import mapsRoutes from './maps.js';
+import { normalizeCriteriaList } from '../lib/searchCriteria.js';
 import poiRoutes from './pois.js';
 
 const router = express.Router();
@@ -52,6 +53,8 @@ const searchSelect = {
   assetType: true,
   pros: true,
   cons: true,
+  mustHaves: true,
+  niceToHaves: true,
   createdById: true,
   createdAt: true,
   updatedAt: true,
@@ -239,7 +242,7 @@ scopedRouter.get('/', async (req, res) => {
 
 scopedRouter.patch('/', requireEditor, async (req, res) => {
   try {
-    const { name, description, pros, cons, assetType } = req.body;
+    const { name, description, pros, cons, assetType, mustHaves, niceToHaves } = req.body;
     const data = {};
 
     if (assetType !== undefined) {
@@ -263,6 +266,12 @@ scopedRouter.patch('/', requireEditor, async (req, res) => {
     }
     if (cons !== undefined) {
       data.cons = normalizeTextField(cons);
+    }
+    if (mustHaves !== undefined) {
+      data.mustHaves = normalizeCriteriaList(mustHaves, req.search.assetType);
+    }
+    if (niceToHaves !== undefined) {
+      data.niceToHaves = normalizeCriteriaList(niceToHaves, req.search.assetType);
     }
 
     const search = await prisma.search.update({

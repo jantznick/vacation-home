@@ -99,6 +99,10 @@ model Search {
   pros        String?
   /// Category-level tradeoffs (newline-separated list items).
   cons        String?
+  /// Structured must-have rules (JSON array of { id, field, op, value }).
+  mustHaves   Json?     @db.JsonB
+  /// Structured nice-to-have rules (JSON array of { id, field, op, value }).
+  niceToHaves Json?     @db.JsonB
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
