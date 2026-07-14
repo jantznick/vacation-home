@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSearchAPI, searchPath, useSearchId } from '../hooks/useSearch';
 import useCurrentSearch from '../hooks/useCurrentSearch';
 import Card from '../components/Card';
@@ -42,7 +42,6 @@ export default function ListingDetail() {
   const searchId = useSearchId();
   const api = useSearchAPI();
   const navigate = useNavigate();
-  const location = useLocation();
   const { canEdit } = useSearchAccess();
   const { assetType } = useCurrentSearch();
   const [listing, setListing] = useState(null);
@@ -53,7 +52,6 @@ export default function ListingDetail() {
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [pricingNotice, setPricingNotice] = useState(location.state?.pricingNotice || null);
   const [locationError, setLocationError] = useState('');
   const [geocoding, setGeocoding] = useState(false);
   const [calculatingDriveTime, setCalculatingDriveTime] = useState(false);
@@ -88,12 +86,6 @@ export default function ListingDetail() {
 
     load();
   }, [id, api]);
-
-  useEffect(() => {
-    if (!location.state?.pricingNotice) return;
-    setPricingNotice(location.state.pricingNotice);
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [location, navigate]);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -233,12 +225,6 @@ export default function ListingDetail() {
 
       {error && (
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-      )}
-
-      {pricingNotice && (
-        <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {pricingNotice}
-        </p>
       )}
 
       {listing.isSoldComp && (

@@ -10,6 +10,7 @@ import FormField from '../components/FormField';
 import QuickAddLakeModal from '../components/QuickAddLakeModal';
 import { LISTING_STATUSES } from '../lib/format';
 import { buildPricingNotice } from '../lib/pricingNotice';
+import { showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, supportsRegions } from '../lib/assetTypes';
 
 const inputClass = 'w-full rounded-md border border-pine-300 px-3 py-2 text-sm';
@@ -401,14 +402,12 @@ export default function ListingForm() {
     try {
       if (isEdit) {
         const data = await api.listings.update(id, payload);
-        navigate(searchPath(searchId, `/listings/${id}`), {
-          state: { pricingNotice: buildPricingNotice(data.pricing) },
-        });
+        showSuccess(buildPricingNotice(data.pricing));
+        navigate(searchPath(searchId, `/listings/${id}`));
       } else {
         const data = await api.listings.create(payload);
-        navigate(searchPath(searchId, `/listings/${data.listing.id}`), {
-          state: { pricingNotice: buildPricingNotice(data.pricing) },
-        });
+        showSuccess(buildPricingNotice(data.pricing));
+        navigate(searchPath(searchId, `/listings/${data.listing.id}`));
       }
     } catch (err) {
       setError(err.message);
