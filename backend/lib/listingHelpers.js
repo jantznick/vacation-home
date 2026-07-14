@@ -107,6 +107,9 @@ function computeCarryingCost(listing, { listPrice, lengthFt, costDefaults }) {
   return {
     loanPaymentMonthly,
     loanPaymentAnnual,
+    downPaymentPct: downPct,
+    interestRate: rate,
+    loanTermYears: termYears,
     downPaymentAmount,
     loanAmount,
     slipAnnual,

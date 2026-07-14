@@ -788,7 +788,7 @@ function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api 
       label: 'Loan payment',
       monthly: cc.loanPaymentMonthly,
       annual: cc.loanPaymentAnnual,
-      note: `${listing.downPaymentPct ?? cc.downPaymentPct ?? '?'}% down · ${listing.interestRate ?? cc.interestRate ?? '?'}% · ${listing.loanTermYears ?? cc.loanTermYears ?? '?'}yr`,
+      note: `${cc.downPaymentPct ?? '?'}% down · ${cc.interestRate ?? '?'}% · ${cc.loanTermYears ?? '?'}yr`,
       editTab: 'loan',
       isDefault: fd.loan,
       onRemove: () => onUpdate({ downPaymentPct: null, interestRate: null, loanTermYears: null }),
@@ -891,6 +891,7 @@ function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api 
               >
                 <div className="min-w-0 flex-1">
                   <span className="text-sm text-pine-700">{row.label}</span>
+                  {row.isDefault && <span className="ml-1.5 rounded bg-pine-100 px-1 py-0.5 text-[10px] text-pine-500">default</span>}
                   {row.note && <span className="ml-1.5 text-xs text-pine-400 sm:inline block">{row.note}</span>}
                 </div>
                 <div className="shrink-0 text-right">
