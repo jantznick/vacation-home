@@ -32,12 +32,36 @@ import {
   BROWSE_EXCLUDED_STATUSES,
 } from '../lib/listingBrowse.js';
 import { normalizePropulsion, supportsRegions } from '../lib/assetTypes.js';
+import { ensureBoatMakeAndModel } from '../lib/boatMakes.js';
 
 const router = express.Router();
 
 const listingInclude = {
   region: { select: { id: true, name: true, slug: true } },
   lake: { select: { id: true, name: true } },
+  boatMake: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      pros: true,
+      cons: true,
+      notes: true,
+    },
+  },
+  boatModel: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      pros: true,
+      cons: true,
+      notes: true,
+      makeId: true,
+    },
+  },
 };
 
 function buildListingWhere(searchId, query) {
@@ -100,6 +124,11 @@ function boatFieldsFromBody(fields, { forCreate = false } = {}) {
   }
   if (fields.model !== undefined || forCreate) {
     data.model = fields.model?.trim?.() ? fields.model.trim() : (fields.model ?? null);
+  }
+  if (fields.nickname !== undefined || forCreate) {
+    data.nickname = fields.nickname?.trim?.()
+      ? fields.nickname.trim()
+      : (fields.nickname ?? null);
   }
   if (fields.propulsion !== undefined) {
     data.propulsion = normalizePropulsion(fields.propulsion, { fallback: null });
@@ -277,16 +306,40 @@ router.get('/:id/snapshots', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const listing = await prisma.listing.findFirst({
-      where: { id: req.params.id, searchId: searchIdFrom(req) },
-      include: {
-        region: true,
-        lake: true,
-      },
+    const searchId = searchIdFrom(req);
+    let listing = await prisma.listing.findFirst({
+      where: { id: req.params.id, searchId },
+      include: listingInclude,
     });
 
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    // Link make/model notes for boats that still only have free-text make/model.
+    if (
+      listing.make
+      && (
+        !listing.boatMakeId
+        || (listing.model && !listing.boatModelId)
+      )
+    ) {
+      const linked = await ensureBoatMakeAndModel(
+        prisma,
+        searchId,
+        listing.make,
+        listing.model,
+      );
+      if (
+        linked.boatMakeId !== listing.boatMakeId
+        || linked.boatModelId !== listing.boatModelId
+      ) {
+        listing = await prisma.listing.update({
+          where: { id: listing.id },
+          data: linked,
+          include: listingInclude,
+        });
+      }
     }
 
     res.json({ listing: serializeListing(listing) });
@@ -345,10 +398,22 @@ router.post('/', async (req, res) => {
           model: fields.model?.trim?.()
             ? fields.model.trim()
             : (scrapedData.model ?? null),
+          nickname: fields.nickname?.trim?.() ? fields.nickname.trim() : null,
           propulsion: fields.propulsion
             ? normalizePropulsion(fields.propulsion)
             : (scrapedData.propulsion || 'sail'),
         };
+
+    if (!homeSearch) {
+      const linked = await ensureBoatMakeAndModel(
+        prisma,
+        searchId,
+        boatData.make,
+        boatData.model,
+      );
+      boatData.boatMakeId = linked.boatMakeId;
+      boatData.boatModelId = linked.boatModelId;
+    }
 
     let listing = await prisma.listing.create({
       data: {
@@ -430,7 +495,10 @@ router.patch('/:id', async (req, res) => {
     delete data.lengthFt;
     delete data.make;
     delete data.model;
+    delete data.nickname;
     delete data.propulsion;
+    delete data.boatMakeId;
+    delete data.boatModelId;
 
     if (!homeSearch) {
       Object.assign(data, boatFieldsFromBody(fields));
@@ -439,6 +507,14 @@ router.patch('/:id', async (req, res) => {
       }
       if (lakeId !== undefined) {
         data.lakeId = null;
+      }
+
+      const nextMake = data.make !== undefined ? data.make : existing.make;
+      const nextModel = data.model !== undefined ? data.model : existing.model;
+      if (fields.make !== undefined || fields.model !== undefined) {
+        const linked = await ensureBoatMakeAndModel(prisma, searchId, nextMake, nextModel);
+        data.boatMakeId = linked.boatMakeId;
+        data.boatModelId = linked.boatModelId;
       }
     } else if (regionId !== undefined) {
       const validation = await validateRegionAndLake(searchId, regionId, lakeId ?? existing.lakeId);

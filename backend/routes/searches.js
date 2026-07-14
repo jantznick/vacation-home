@@ -4,9 +4,11 @@ import prisma from '../lib/prisma.js';
 import { slugify, uniqueSearchSlug } from '../lib/slug.js';
 import { loadSearchMembership, requireEditor, requireOwner } from '../middleware/searchAccess.js';
 import { sendInviteEmail } from '../services/email/resend.js';
-import { isAssetType, normalizeAssetType, supportsRegions } from '../lib/assetTypes.js';
+import { isAssetType, normalizeAssetType, supportsRegions, isBoatSearch } from '../lib/assetTypes.js';
 import regionRoutes from './regions.js';
 import lakeRoutes from './lakes.js';
+import boatMakeRoutes from './boatMakes.js';
+import boatModelRoutes from './boatModels.js';
 import listingRoutes from './listings.js';
 import commentRoutes from './comments.js';
 import ingestRoutes from './ingest.js';
@@ -591,6 +593,8 @@ scopedRouter.delete('/members/:userId', requireOwner, async (req, res) => {
 scopedRouter.use('/pois', poiRoutes);
 scopedRouter.use('/regions', requireHomeAssetType, requireEditorUnlessRead, regionRoutes);
 scopedRouter.use('/lakes', requireHomeAssetType, requireEditorUnlessRead, lakeRoutes);
+scopedRouter.use('/boat-makes', requireBoatAssetType, requireEditorUnlessRead, boatMakeRoutes);
+scopedRouter.use('/boat-models', requireBoatAssetType, requireEditorUnlessRead, boatModelRoutes);
 scopedRouter.use('/listings', requireEditorUnlessRead, listingRoutes);
 scopedRouter.use('/comments', commentRoutes);
 scopedRouter.use('/ingest', requireEditor, ingestRoutes);
@@ -609,6 +613,13 @@ function requireEditorUnlessRead(req, res, next) {
 
 function requireHomeAssetType(req, res, next) {
   if (supportsRegions(req.search?.assetType)) {
+    return next();
+  }
+  return res.status(404).json({ error: 'Not found' });
+}
+
+function requireBoatAssetType(req, res, next) {
+  if (isBoatSearch(req.search?.assetType)) {
     return next();
   }
   return res.status(404).json({ error: 'Not found' });

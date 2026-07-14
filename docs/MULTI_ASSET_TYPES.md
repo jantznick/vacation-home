@@ -43,7 +43,11 @@ Boat fields:
 
 - `lengthFt` (Float)
 - `make`, `model` (String)
+- `nickname` (String, optional — shown after make/model in lists)
 - `propulsion` — `sail` \| `motor` \| `other` (default `sail`)
+- `boatMakeId` / `boatModelId` — links to search-scoped `BoatMake` / `BoatModel` (auto find-or-create from make/model text)
+
+`BoatMake` / `BoatModel` hold description, pros, cons, and notes that cascade onto boat detail pages.
 
 `regionId` is **optional**. Required for home listings; null for boats.
 
@@ -62,10 +66,11 @@ Boat comps use length (± ~20%) and matching propulsion when present. `$/ft` is 
 
 | Area | Home | Boat |
 |---|---|---|
-| Nav | Dashboard, Regions, Listings, Map, Estimator, Price picker, Settings | Same **minus Regions** |
+| Nav | Dashboard, Regions, Listings, Map, Estimator, Price picker, Settings | Same **minus Regions**, plus **Makes** |
 | Create Search | Pick Homes or Boats | Same |
 | Dashboard | Region stats + home framing | Category pros/cons + boat stats |
-| Add listing | Region required; Zillow import | YachtWorld URL + page-source paste; no region |
+| Add listing | Region required; Zillow import | YachtWorld URL + page-source paste; no region; optional nickname |
+| Makes & models | — | Search-scoped make → model notes (pros/cons/description); cascade onto boat detail |
 | Estimator | Dream home form | Length / year / propulsion |
 
 ## Roadmap (later)

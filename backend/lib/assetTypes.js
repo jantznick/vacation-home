@@ -49,6 +49,10 @@ export function supportsRegions(assetType) {
   return assetTypeMeta(assetType).supportsRegions;
 }
 
+export function isBoatSearch(assetType) {
+  return assetType === 'boat';
+}
+
 export function normalizeAssetType(value) {
   if (isAssetType(value)) {
     return value;

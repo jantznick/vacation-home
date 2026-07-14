@@ -16,6 +16,7 @@ export const ASSET_TYPES = {
     listingLabel: 'boat',
     supportsRegions: false,
     supportsLakes: false,
+    supportsBoatMakes: true,
   },
   rv: {
     key: 'rv',
@@ -24,6 +25,7 @@ export const ASSET_TYPES = {
     listingLabel: 'RV',
     supportsRegions: false,
     supportsLakes: false,
+    supportsBoatMakes: false,
   },
 };
 
@@ -45,6 +47,11 @@ export function assetTypeMeta(assetType) {
 export function supportsRegions(assetType) {
   if (!assetType) return false;
   return assetTypeMeta(assetType).supportsRegions;
+}
+
+export function supportsBoatMakes(assetType) {
+  if (!assetType) return false;
+  return Boolean(assetTypeMeta(assetType).supportsBoatMakes);
 }
 
 export function isBoatSearch(assetType) {

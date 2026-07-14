@@ -12,12 +12,11 @@ import usePrimaryPoi from '../hooks/usePrimaryPoi';
 import ListingPrimaryDriveTime from '../components/ListingPrimaryDriveTime';
 import ListingStaleBadge from '../components/ListingStaleBadge';
 import { isBoatSearch, parseLineList, supportsRegions } from '../lib/assetTypes';
+import { formatBoatTitle } from '../lib/boatTitle';
 
 function listingTitle(listing, boat) {
   if (boat) {
-    const name = [listing.make, listing.model].filter(Boolean).join(' ');
-    if (name) return name;
-    if (listing.lengthFt) return `${listing.lengthFt} ft boat`;
+    return formatBoatTitle(listing);
   }
   return listing.address || 'Untitled listing';
 }

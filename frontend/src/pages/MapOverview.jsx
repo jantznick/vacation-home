@@ -11,6 +11,7 @@ import MapPanel, {
 import PageHeader from '../components/PageHeader';
 import { formatNumber, formatDriveTime } from '../lib/format';
 import { isBoatSearch, supportsRegions } from '../lib/assetTypes';
+import { formatBoatTitle } from '../lib/boatTitle';
 
 export default function MapOverview() {
   const searchId = useSearchId();
@@ -139,9 +140,7 @@ export default function MapOverview() {
                 <li key={listing.id} className="flex items-center justify-between gap-3">
                   <Link to={searchPath(searchId, `/listings/${listing.id}`)} className="font-medium text-pine-800 hover:text-pine-950">
                     {boatMode
-                      ? ([listing.make, listing.model].filter(Boolean).join(' ')
-                        || listing.address
-                        || 'Untitled boat')
+                      ? formatBoatTitle(listing)
                       : (listing.address || 'Untitled listing')}
                   </Link>
                   {listing.driveTimeMinutes != null && (

@@ -118,6 +118,26 @@ export function createSearchAPI(searchId) {
         request(`${base}/lakes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
       remove: (id) => request(`${base}/lakes/${id}`, { method: 'DELETE' }),
     },
+    boatMakes: {
+      list: () => request(`${base}/boat-makes`),
+      get: (id) => request(`${base}/boat-makes/${id}`),
+      create: (data) =>
+        request(`${base}/boat-makes`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (id, data) =>
+        request(`${base}/boat-makes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      remove: (id) => request(`${base}/boat-makes/${id}`, { method: 'DELETE' }),
+      createModel: (makeId, data) =>
+        request(`${base}/boat-makes/${makeId}/models`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+    },
+    boatModels: {
+      get: (id) => request(`${base}/boat-models/${id}`),
+      update: (id, data) =>
+        request(`${base}/boat-models/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      remove: (id) => request(`${base}/boat-models/${id}`, { method: 'DELETE' }),
+    },
     listings: {
       list: (filters = {}) => {
         const params = new URLSearchParams();

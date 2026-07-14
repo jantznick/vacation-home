@@ -39,6 +39,7 @@ const emptyForm = {
   waterfrontType: '',
   make: '',
   model: '',
+  nickname: '',
   lengthFt: '',
   propulsion: 'sail',
   pros: '',
@@ -146,6 +147,7 @@ export default function ListingForm() {
           waterfrontType: listing.waterfrontType || '',
           make: listing.make || '',
           model: listing.model || '',
+          nickname: listing.nickname || '',
           lengthFt: listing.lengthFt ?? '',
           propulsion: listing.propulsion || 'sail',
           pros: listing.pros || '',
@@ -354,6 +356,7 @@ export default function ListingForm() {
           soldPrice: form.soldPrice ? Number(form.soldPrice) : null,
           make: form.make || null,
           model: form.model || null,
+          nickname: form.nickname || null,
           lengthFt: form.lengthFt ? Number(form.lengthFt) : null,
           yearBuilt: form.yearBuilt ? Number(form.yearBuilt) : null,
           propulsion: form.propulsion || 'sail',
@@ -549,6 +552,16 @@ export default function ListingForm() {
                   </FormField>
                   <FormField label="Model" htmlFor="model">
                     <input id="model" name="model" value={form.model} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Nickname" htmlFor="nickname" className="sm:col-span-2">
+                    <input
+                      id="nickname"
+                      name="nickname"
+                      value={form.nickname}
+                      onChange={handleChange}
+                      className={inputClass}
+                      placeholder="Optional — e.g. Sea Breeze"
+                    />
                   </FormField>
                   <FormField label="Length (ft)" htmlFor="lengthFt">
                     <input id="lengthFt" name="lengthFt" type="number" step="0.1" value={form.lengthFt} onChange={handleChange} className={inputClass} />

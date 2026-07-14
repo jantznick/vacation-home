@@ -18,12 +18,11 @@ import ListingStaleBadge from '../components/ListingStaleBadge';
 import ListingPriceSignal from '../components/ListingPriceSignal';
 import { showError, showSuccess } from '../lib/toast';
 import { BOAT_PROPULSIONS, isBoatSearch, supportsRegions } from '../lib/assetTypes';
+import { formatBoatTitle } from '../lib/boatTitle';
 
 function listingTitle(listing, boat) {
   if (boat) {
-    const name = [listing.make, listing.model].filter(Boolean).join(' ');
-    if (name) return name;
-    if (listing.lengthFt) return `${listing.lengthFt} ft boat`;
+    return formatBoatTitle(listing);
   }
   return listing.address || 'Untitled listing';
 }

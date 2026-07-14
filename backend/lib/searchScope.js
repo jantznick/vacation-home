@@ -29,6 +29,25 @@ export async function getLakeInSearch(searchId, lakeId) {
   return lake;
 }
 
+export async function getBoatMakeInSearch(searchId, makeId) {
+  return prisma.boatMake.findFirst({
+    where: { id: makeId, searchId },
+  });
+}
+
+export async function getBoatModelInSearch(searchId, modelId) {
+  const model = await prisma.boatModel.findUnique({
+    where: { id: modelId },
+    include: { make: { select: { searchId: true, id: true } } },
+  });
+
+  if (!model || model.make.searchId !== searchId) {
+    return null;
+  }
+
+  return model;
+}
+
 export async function getPricingModelInSearch(searchId, modelId) {
   return prisma.pricingModel.findFirst({
     where: { id: modelId, searchId },

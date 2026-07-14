@@ -108,10 +108,52 @@ model Search {
   invites       SearchInvite[]
   pois          PointOfInterest[]
   regions       Region[]
+  boatMakes     BoatMake[]
   listings      Listing[]
   pricingModels PricingModel[]
 
   @@index([assetType])
+}
+
+/// Search-scoped boat manufacturer notes (pros/cons cascade onto listings).
+model BoatMake {
+  id          String   @id @default(uuid())
+  searchId    String
+  name        String
+  slug        String
+  description String?
+  pros        String?
+  cons        String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  search   Search      @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  models   BoatModel[]
+  listings Listing[]
+
+  @@unique([searchId, slug])
+  @@index([searchId])
+}
+
+/// Model under a make; notes cascade onto matching boat listings.
+model BoatModel {
+  id          String   @id @default(uuid())
+  makeId      String
+  name        String
+  slug        String
+  description String?
+  pros        String?
+  cons        String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  make     BoatMake  @relation(fields: [makeId], references: [id], onDelete: Cascade)
+  listings Listing[]
+
+  @@unique([makeId, slug])
+  @@index([makeId])
 }
 
 model SearchMember {
@@ -247,6 +289,8 @@ model Listing {
   lengthFt           Float?
   make               String?
   model              String?
+  /// Optional friendly name for this hull (shown after make/model).
+  nickname           String?
   propulsion         BoatPropulsion?
   pros               String?
   cons               String?
@@ -270,12 +314,20 @@ model Listing {
   lakeId String?
   lake   Lake?   @relation(fields: [lakeId], references: [id], onDelete: SetNull)
 
+  boatMakeId String?
+  boatMake   BoatMake? @relation(fields: [boatMakeId], references: [id], onDelete: SetNull)
+
+  boatModelId String?
+  boatModel   BoatModel? @relation(fields: [boatModelId], references: [id], onDelete: SetNull)
+
   snapshots ListingSnapshot[]
   commutes  ListingCommute[]
 
   @@index([searchId])
   @@index([regionId])
   @@index([lakeId])
+  @@index([boatMakeId])
+  @@index([boatModelId])
   @@index([isVacantLot])
   @@index([status])
   @@index([propulsion])

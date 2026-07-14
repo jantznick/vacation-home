@@ -11,6 +11,7 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { searchPath } from '../hooks/useSearch';
+import { formatBoatTitle } from '../lib/boatTitle';
 
 const MARKER_COLORS = {
   home: '#166534',
@@ -194,13 +195,14 @@ export function buildListingMarker(listing, searchId) {
   }
 
   const address = [listing.address, listing.city, listing.state].filter(Boolean).join(', ');
+  const isBoat = Boolean(listing.make || listing.model || listing.lengthFt != null || listing.propulsion);
 
   return {
     id: `listing-${listing.id}`,
     type: 'listing',
     latitude: listing.latitude,
     longitude: listing.longitude,
-    label: listing.address || 'Listing',
+    label: isBoat ? formatBoatTitle(listing) : (listing.address || 'Listing'),
     sublabel: address || listing.region?.name,
     href: searchId
       ? searchPath(searchId, `/listings/${listing.id}`)

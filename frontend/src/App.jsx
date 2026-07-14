@@ -12,6 +12,10 @@ import Dashboard from './pages/Dashboard';
 import Regions from './pages/Regions';
 import RegionDetail from './pages/RegionDetail';
 import RegionForm from './pages/RegionForm';
+import BoatMakes from './pages/BoatMakes';
+import BoatMakeDetail from './pages/BoatMakeDetail';
+import BoatMakeForm from './pages/BoatMakeForm';
+import BoatModelDetail from './pages/BoatModelDetail';
 import Listings from './pages/Listings';
 import ListingDetail from './pages/ListingDetail';
 import ListingForm from './pages/ListingForm';
@@ -79,6 +83,11 @@ export default function App() {
       <Route path="/searches/:searchId/regions/new" element={<SearchLayout><RegionForm /></SearchLayout>} />
       <Route path="/searches/:searchId/regions/:id/edit" element={<SearchLayout><RegionForm /></SearchLayout>} />
       <Route path="/searches/:searchId/regions/:id" element={<SearchLayout><RegionDetail /></SearchLayout>} />
+      <Route path="/searches/:searchId/makes" element={<SearchLayout><BoatMakes /></SearchLayout>} />
+      <Route path="/searches/:searchId/makes/new" element={<SearchLayout><BoatMakeForm /></SearchLayout>} />
+      <Route path="/searches/:searchId/makes/:id/edit" element={<SearchLayout><BoatMakeForm /></SearchLayout>} />
+      <Route path="/searches/:searchId/makes/:makeId/models/:modelId" element={<SearchLayout><BoatModelDetail /></SearchLayout>} />
+      <Route path="/searches/:searchId/makes/:id" element={<SearchLayout><BoatMakeDetail /></SearchLayout>} />
       <Route path="/searches/:searchId/listings" element={<SearchLayout><Listings /></SearchLayout>} />
       <Route path="/searches/:searchId/listings/new" element={<SearchLayout><ListingForm /></SearchLayout>} />
       <Route path="/searches/:searchId/listings/:id/edit" element={<SearchLayout><ListingForm /></SearchLayout>} />

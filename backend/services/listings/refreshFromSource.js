@@ -10,6 +10,29 @@ import { retrainAfterListingChange } from '../pricing/index.js';
 const listingInclude = {
   region: { select: { id: true, name: true, slug: true } },
   lake: { select: { id: true, name: true } },
+  boatMake: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      pros: true,
+      cons: true,
+      notes: true,
+    },
+  },
+  boatModel: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      pros: true,
+      cons: true,
+      notes: true,
+      makeId: true,
+    },
+  },
 };
 
 function photoCount(urls) {
