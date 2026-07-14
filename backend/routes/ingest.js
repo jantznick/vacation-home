@@ -46,15 +46,12 @@ router.post('/preview-paste', async (req, res) => {
   try {
     const { url, pastedData } = req.body;
 
-    if (!url?.trim()) {
-      return res.status(400).json({ error: 'Listing URL is required' });
-    }
     if (!pastedData?.trim()) {
       return res.status(400).json({ error: 'Pasted page data is required' });
     }
 
     const result = previewListingFromPaste({
-      sourceUrl: url.trim(),
+      sourceUrl: url?.trim() || null,
       pastedData,
     });
 

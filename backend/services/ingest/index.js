@@ -45,8 +45,13 @@ export async function previewListingFromUrl(urlString, context = {}) {
 }
 
 export function previewListingFromPaste({ sourceUrl, pastedData }) {
+  if (!pastedData?.trim()) {
+    throw new Error('Pasted page data is required');
+  }
+
+  // YachtWorld page source embeds the listing URL — allow paste without typing it first.
   if (!sourceUrl?.trim()) {
-    throw new Error('Listing URL is required');
+    return parseYachtWorldFromPaste({ sourceUrl: null, pastedData });
   }
 
   const sourceSite = detectSourceSite(sourceUrl);

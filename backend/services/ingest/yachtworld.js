@@ -82,6 +82,63 @@ function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }
 
+/** Prefer a true model code over page titles like "1971 Pearson 33 | 33ft". */
+function cleanBoatModel(rawModel, make, year) {
+  if (rawModel == null) return null;
+  let model = String(rawModel).replace(/\s+/g, ' ').trim();
+  if (!model) return null;
+
+  // Drop trailing " | 33ft" style suffixes from YachtWorld H1 titles.
+  model = model.replace(/\s*\|\s*[0-9.]+\s*(ft|m)\b.*$/i, '').trim();
+
+  if (year != null && /^\d{4}\b/.test(model)) {
+    model = model.replace(/^\d{4}\s*/, '').trim();
+  }
+
+  if (make) {
+    const makeRe = new RegExp(`^${make.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+`, 'i');
+    if (makeRe.test(model)) {
+      model = model.replace(makeRe, '').trim();
+    } else if (model.toLowerCase().startsWith(make.toLowerCase())) {
+      model = model.slice(make.length).trim();
+    }
+  }
+
+  return model || null;
+}
+
+function hasRichYachtWorldPayload(html) {
+  return typeof html === 'string'
+    && /var\s+__REDUX_STATE__\s*=/.test(html);
+}
+
+export function guessYachtWorldUrlFromHtml(html) {
+  if (!html || typeof html !== 'string') return null;
+
+  const patterns = [
+    /property=["']og:url["'][^>]*content=["']([^"']+)["']/i,
+    /content=["']([^"']+)["'][^>]*property=["']og:url["']/i,
+    /rel=["']canonical["'][^>]*href=["']([^"']+)["']/i,
+    /href=["']([^"']+)["'][^>]*rel=["']canonical["']/i,
+    /"url"\s*:\s*"(https:\/\/(?:www\.)?yachtworld\.com\/yacht\/[^"]+)"/i,
+    /https:\/\/(?:www\.)?yachtworld\.com\/yacht\/[a-z0-9-]+\/?/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    const candidate = match?.[1] || match?.[0];
+    if (candidate && isYachtWorldUrl(candidate)) {
+      try {
+        return normalizeYachtWorldUrl(candidate);
+      } catch {
+        // continue
+      }
+    }
+  }
+
+  return null;
+}
+
 function numericValue(value) {
   if (value === null || value === undefined || value === '') {
     return null;
@@ -227,6 +284,7 @@ function inferPropulsion(boat) {
     boat?.boatCategoryCode,
     boat?.type,
     boat?.class,
+    boat?.classes,
     boat?.boatClass,
     boat?.category,
     boat?.hullType,
@@ -234,6 +292,7 @@ function inferPropulsion(boat) {
     boat?.fuelType,
     boat?.name,
   ]
+    .flat()
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
@@ -241,10 +300,14 @@ function inferPropulsion(boat) {
   if (!haystack) {
     return 'sail';
   }
-  if (/\bsail|\bsailing|\bsailboat|\bketch|\bsloop|\bcutter|\byawl/.test(haystack)) {
+  if (/\bsail|\bsailing|\bsailboat|\bketch|\bsloop|\bcutter|\byawl|\bsail-/.test(haystack)) {
     return 'sail';
   }
-  if (/\bpower|\bmotor|\bcruiser|\bsportfish|\btrawler|\bcenter console|\boutboard/.test(haystack)) {
+  if (/\bpower|\bmotor|\bsportfish|\btrawler|\bcenter console|\boutboard|\bpowerboat/.test(haystack)) {
+    return 'motor';
+  }
+  // Avoid bare "cruiser" — YachtWorld uses sail-cruiser for sailboats.
+  if (/\bcruiser\b/.test(haystack) && !/\bsail/.test(haystack)) {
     return 'motor';
   }
   return 'other';
@@ -304,8 +367,11 @@ function extractLocation(boat) {
 function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
   const location = extractLocation(boat || {});
   const make = firstString(boat?.make, boat?.manufacturer, boat?.brand?.name, boat?.brand);
-  const model = firstString(boat?.model, boat?.modelRange, boat?.boatModel, boat?.name);
   const yearBuilt = intValue(boat?.year ?? boat?.yearBuilt ?? boat?.boatYear);
+  const rawModel = firstString(boat?.model, boat?.modelRange, boat?.boatModel);
+  // Only fall back to name/title after cleaning — raw titles include year/make/length.
+  const model = cleanBoatModel(rawModel, make, yearBuilt)
+    || cleanBoatModel(firstString(boat?.name, boat?.boatName), make, yearBuilt);
   const listPrice = extractPrice(boat?.price ?? boat?.normPrice ?? boat?.offers);
   const lengthFt = extractLengthFt(boat);
   const photos = extractPhotos(boat);
@@ -331,9 +397,7 @@ function mapBoatRecord(boat, { sourceUrl, listingId = null } = {}) {
     soldPrice: null,
     yearBuilt,
     make,
-    model: model && make && model.toLowerCase().startsWith(make.toLowerCase())
-      ? model.slice(make.length).trim() || model
-      : model,
+    model,
     lengthFt,
     propulsion: inferPropulsion(boat),
     photoUrls: photos.length ? photos : null,
@@ -633,13 +697,15 @@ export function parseYachtWorldHtml(html, sourceUrl) {
       const product = jsonLd[0];
       boat = {
         make: product.brand?.name || product.brand || slug?.make,
-        model: product.model || product.name,
+        // Prefer an explicit model field; product.name is usually the full listing title.
+        model: product.model || slug?.model || null,
         year: product.vehicleModelDate || product.productionDate || slug?.year,
         price: product.offers?.price || product.offers?.[0]?.price,
         image: product.image,
         name: product.name,
         id: product.productID || product.sku || listingId,
         location: product.offers?.availableAtOrFrom?.address,
+        type: product.category || product.vehicleModelDate || null,
       };
     }
   }
@@ -694,14 +760,17 @@ export function parseYachtWorldHtml(html, sourceUrl) {
 }
 
 export function parseYachtWorldFromPaste({ sourceUrl, pastedData }) {
-  if (!sourceUrl?.trim()) {
-    throw new Error('YachtWorld listing URL is required');
-  }
   if (!pastedData?.trim()) {
     throw new Error('Pasted page data is required');
   }
 
-  const result = parseYachtWorldHtml(pastedData, sourceUrl.trim());
+  const resolvedUrl = sourceUrl?.trim()
+    || guessYachtWorldUrlFromHtml(pastedData);
+  if (!resolvedUrl) {
+    throw new Error('Could not find a YachtWorld listing URL in the page source. Paste the listing URL or include full page source.');
+  }
+
+  const result = parseYachtWorldHtml(pastedData, resolvedUrl);
   const needsPaste = Boolean(
     !result.fields?.listPrice
     || !result.fields?.lengthFt
@@ -749,8 +818,11 @@ export async function fetchListingFromYachtWorld(urlString) {
 
   try {
     const plain = await fetchHtmlPlain(sourceUrl);
-    if (!looksBlocked(plain.html, plain.status)) {
+    // Thin pages often include JSON-LD only — that misses length/location/gallery.
+    if (!looksBlocked(plain.html, plain.status) && hasRichYachtWorldPayload(plain.html)) {
       html = plain.html;
+    } else if (!looksBlocked(plain.html, plain.status)) {
+      console.info('[yachtworld] Direct fetch lacked Redux listing payload; falling back to browser render.');
     } else {
       console.info('[yachtworld] Direct fetch blocked; falling back to browser render.');
     }
@@ -767,6 +839,9 @@ export async function fetchListingFromYachtWorld(urlString) {
       }
       if (looksBlocked(html, 200)) {
         throw new Error('YachtWorld still showed a security check page.');
+      }
+      if (!hasRichYachtWorldPayload(html)) {
+        console.warn('[yachtworld] Browser HTML still missing Redux payload; parser may be incomplete.');
       }
     } catch (error) {
       console.warn('[yachtworld] Browser fetch failed:', error.message);

@@ -77,8 +77,9 @@ function sleep(ms) {
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 /**
- * Load a URL in Chrome/Chromium and return the rendered HTML.
- * Set PUPPETEER_HEADLESS=false locally to watch the browser window.
+ * Load a URL in Chrome/Chromium and return HTML that still includes YachtWorld's
+ * Redux payload. After hydration, script tags are often emptied — so we re-inject
+ * window.__REDUX_STATE__ when present.
  */
 export async function fetchHtmlWithPuppeteer(url) {
   const debug = isDebugMode();
@@ -125,8 +126,8 @@ export async function fetchHtmlWithPuppeteer(url) {
 
     await page.waitForFunction(
       () => {
+        if (typeof window.__REDUX_STATE__ !== 'undefined') return true;
         if (document.getElementById('__NEXT_DATA__')) return true;
-        if (document.querySelector('script[type="application/ld+json"]')) return true;
         return [...document.scripts].some((script) => (
           (script.textContent || '').includes('var __REDUX_STATE__=')
         ));
@@ -140,11 +141,81 @@ export async function fetchHtmlWithPuppeteer(url) {
       await sleep(pauseMs);
     }
 
-    const html = await page.content();
+    const capture = await page.evaluate(() => {
+      const serializeRedux = (value) => {
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return null;
+        }
+      };
+
+      if (typeof window.__REDUX_STATE__ !== 'undefined') {
+        return {
+          reduxJson: serializeRedux(window.__REDUX_STATE__),
+          html: document.documentElement?.outerHTML || '',
+        };
+      }
+
+      for (const script of document.scripts) {
+        const text = script.textContent || '';
+        const marker = 'var __REDUX_STATE__=';
+        const idx = text.indexOf(marker);
+        if (idx === -1) continue;
+        let i = idx + marker.length;
+        while (i < text.length && /\s/.test(text[i])) i += 1;
+        if (text[i] !== '{') continue;
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+        for (let j = i; j < text.length; j += 1) {
+          const ch = text[j];
+          if (inString) {
+            if (escape) {
+              escape = false;
+              continue;
+            }
+            if (ch === '\\') {
+              escape = true;
+              continue;
+            }
+            if (ch === '"') inString = false;
+            continue;
+          }
+          if (ch === '"') {
+            inString = true;
+            continue;
+          }
+          if (ch === '{') depth += 1;
+          else if (ch === '}') {
+            depth -= 1;
+            if (depth === 0) {
+              return {
+                reduxJson: text.slice(i, j + 1),
+                html: document.documentElement?.outerHTML || '',
+              };
+            }
+          }
+        }
+      }
+
+      return {
+        reduxJson: null,
+        html: document.documentElement?.outerHTML || '',
+      };
+    });
+
+    let html = capture.html || await page.content();
+    if (capture.reduxJson) {
+      // Re-inject so parsers that read page source still see Redux after hydration.
+      html = `<script>var __REDUX_STATE__=${capture.reduxJson};</script>\n${html}`;
+    }
+
     if (debug) {
       console.log('[puppeteer debug] HTML snapshot:', {
         length: html.length,
         hasRedux: html.includes('var __REDUX_STATE__='),
+        capturedRedux: Boolean(capture.reduxJson),
         hasNextData: html.includes('__NEXT_DATA__'),
         hasLdJson: /type=["']application\/ld\+json["']/i.test(html),
       });
