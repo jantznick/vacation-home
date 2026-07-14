@@ -206,7 +206,8 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    const serialized = serializeListings(listings);
+    const costDefaults = req.search?.costDefaults;
+    const serialized = serializeListings(listings, { costDefaults });
     const sortBy = req.query.sortBy || 'createdAt';
     const sortDir = req.query.sortDir === 'asc' ? 'asc' : 'desc';
     const sorted = sortSerializedListings(serialized, sortBy, sortDir);
@@ -398,7 +399,7 @@ router.get('/:id', async (req, res) => {
       }
     }
 
-    res.json({ listing: serializeListing(listing) });
+    res.json({ listing: serializeListing(listing, { costDefaults: req.search?.costDefaults }) });
   } catch (error) {
     console.error('Get listing error:', error);
     res.status(500).json({ error: 'Failed to get listing' });
@@ -522,7 +523,7 @@ router.post('/', async (req, res) => {
     const pricing = await retrainAfterListingChange({ after: listing, searchId });
 
     res.status(201).json({
-      listing: serializeListing(listing),
+      listing: serializeListing(listing, { costDefaults: req.search?.costDefaults }),
       warnings,
       pricing,
     });
@@ -666,7 +667,7 @@ router.patch('/:id', async (req, res) => {
 
     const pricing = await retrainAfterListingChange({ before: existing, after: listing, searchId });
 
-    res.json({ listing: serializeListing(listing), pricing });
+    res.json({ listing: serializeListing(listing, { costDefaults: req.search?.costDefaults }), pricing });
   } catch (error) {
     console.error('Update listing error:', error);
     res.status(500).json({ error: 'Failed to update listing' });
@@ -720,7 +721,7 @@ router.post('/:id/geocode', async (req, res) => {
       listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     }
 
-    res.json({ listing: serializeListing(listing), commutes });
+    res.json({ listing: serializeListing(listing, { costDefaults: req.search?.costDefaults }), commutes });
   } catch (error) {
     console.error('Geocode listing error:', error);
     res.status(422).json({ error: error.message || 'Failed to geocode listing' });

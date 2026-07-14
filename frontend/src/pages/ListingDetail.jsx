@@ -773,6 +773,7 @@ function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api 
 
   const [modalTab, setModalTab] = useState(null);
 
+  const fd = cc.fromDefaults || {};
   const hasLoan = cc.loanPaymentMonthly != null;
   const hasAnyCost = cc.totalAnnual != null;
   const hasFinancingInputs = listing.downPaymentPct != null || listing.interestRate != null;
@@ -787,8 +788,9 @@ function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api 
       label: 'Loan payment',
       monthly: cc.loanPaymentMonthly,
       annual: cc.loanPaymentAnnual,
-      note: `${listing.downPaymentPct}% down · ${listing.interestRate}% · ${listing.loanTermYears}yr`,
+      note: `${listing.downPaymentPct ?? cc.downPaymentPct ?? '?'}% down · ${listing.interestRate ?? cc.interestRate ?? '?'}% · ${listing.loanTermYears ?? cc.loanTermYears ?? '?'}yr`,
       editTab: 'loan',
+      isDefault: fd.loan,
       onRemove: () => onUpdate({ downPaymentPct: null, interestRate: null, loanTermYears: null }),
     });
   }
@@ -801,22 +803,26 @@ function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api 
 
   if (boatMode && cc.winterStorage != null) {
     rows.push({ key: 'winter', label: 'Winter storage', monthly: null, annual: cc.winterStorage, editTab: 'marina',
+      isDefault: fd.winterStorage,
       onRemove: () => onUpdate({ marinaId: null, preferredSlipIndex: null }),
     });
   }
 
   if (cc.insurance != null) {
     rows.push({ key: 'insurance', label: 'Insurance', monthly: Math.round(cc.insurance / 12), annual: cc.insurance, editTab: 'insurance',
+      isDefault: fd.insurance,
       onRemove: () => onUpdate({ annualInsurance: null }),
     });
   }
   if (cc.tax != null) {
     rows.push({ key: 'tax', label: 'Tax', monthly: Math.round(cc.tax / 12), annual: cc.tax, editTab: 'tax',
+      isDefault: fd.tax,
       onRemove: () => onUpdate({ annualTax: null }),
     });
   }
   if (cc.maintenance != null) {
     rows.push({ key: 'maintenance', label: 'Maintenance', monthly: Math.round(cc.maintenance / 12), annual: cc.maintenance, editTab: 'maintenance',
+      isDefault: fd.maintenance,
       onRemove: () => onUpdate({ annualMaintenance: null }),
     });
   }

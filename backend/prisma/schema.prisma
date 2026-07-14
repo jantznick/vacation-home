@@ -108,6 +108,8 @@ model Search {
   niceToHaves    Json?     @db.JsonB
   /// Free-text nice-to-have notes (things that can't be auto-evaluated).
   niceToHaveNotes String?
+  /// Search-level cost defaults applied to all listings (insurance, winter storage, etc.).
+  costDefaults   Json?     @db.JsonB
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -22,6 +22,7 @@ export async function loadSearchMembership(req, res, next) {
         cons: true,
         mustHaves: true,
         niceToHaves: true,
+        costDefaults: true,
         createdById: true,
         createdAt: true,
         updatedAt: true,

@@ -58,6 +58,7 @@ const searchSelect = {
   mustHaveNotes: true,
   niceToHaves: true,
   niceToHaveNotes: true,
+  costDefaults: true,
   createdById: true,
   createdAt: true,
   updatedAt: true,
@@ -245,7 +246,7 @@ scopedRouter.get('/', async (req, res) => {
 
 scopedRouter.patch('/', requireEditor, async (req, res) => {
   try {
-    const { name, description, pros, cons, assetType, mustHaves, niceToHaves } = req.body;
+    const { name, description, pros, cons, assetType, mustHaves, niceToHaves, costDefaults } = req.body;
     const data = {};
 
     if (assetType !== undefined) {
@@ -275,6 +276,11 @@ scopedRouter.patch('/', requireEditor, async (req, res) => {
     }
     if (niceToHaves !== undefined) {
       data.niceToHaves = normalizeCriteriaList(niceToHaves, req.search.assetType);
+    }
+    if (costDefaults !== undefined) {
+      data.costDefaults = costDefaults && typeof costDefaults === 'object'
+        ? costDefaults
+        : null;
     }
 
     const search = await prisma.search.update({

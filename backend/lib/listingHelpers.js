@@ -48,12 +48,14 @@ function monthlyPayment(principal, annualRate, years) {
 
 /**
  * Compute annual carrying cost breakdown for a listing.
+ * Falls back to search-level costDefaults for fields not set on the listing.
  */
-function computeCarryingCost(listing, { listPrice, lengthFt }) {
+function computeCarryingCost(listing, { listPrice, lengthFt, costDefaults }) {
+  const defaults = costDefaults && typeof costDefaults === 'object' ? costDefaults : {};
   const price = listPrice ?? 0;
-  const downPct = listing.downPaymentPct ?? null;
-  const rate = listing.interestRate ?? null;
-  const termYears = listing.loanTermYears ?? null;
+  const downPct = listing.downPaymentPct ?? defaults.downPaymentPct ?? null;
+  const rate = listing.interestRate ?? defaults.interestRate ?? null;
+  const termYears = listing.loanTermYears ?? defaults.loanTermYears ?? null;
 
   let loanPaymentMonthly = null;
   let loanPaymentAnnual = null;
@@ -73,20 +75,34 @@ function computeCarryingCost(listing, { listPrice, lengthFt }) {
     ? options[listing.preferredSlipIndex]
     : bestSlipOption(marina, lengthFt);
   const slipAnnual = slip ? slipAnnualFromOption(slip, lengthFt) : null;
-  const winterStorage = marina?.winterStorageCost ?? null;
+  const winterStorage = marina?.winterStorageCost ?? defaults.winterStorage ?? null;
 
-  const insurance = listing.annualInsurance ?? null;
-  const tax = listing.annualTax ?? null;
-  const maintenance = listing.annualMaintenance ?? null;
+  const insurance = listing.annualInsurance ?? defaults.annualInsurance ?? null;
+  const tax = listing.annualTax ?? defaults.annualTax ?? null;
+  const maintenance = listing.annualMaintenance ?? defaults.annualMaintenance ?? null;
 
-  const customCosts = Array.isArray(listing.additionalCosts)
+  const listingCustom = Array.isArray(listing.additionalCosts)
     ? listing.additionalCosts.filter((c) => c && c.name && c.annualCost != null)
     : [];
+  const defaultCustom = Array.isArray(defaults.additionalCosts)
+    ? defaults.additionalCosts.filter((c) => c && c.name && c.annualCost != null)
+    : [];
+  const customCosts = listingCustom.length > 0 ? listingCustom : defaultCustom;
   const customTotal = customCosts.reduce((s, c) => s + Number(c.annualCost), 0) || null;
 
   const parts = [loanPaymentAnnual, slipAnnual, winterStorage, insurance, tax, maintenance, customTotal];
   const knownParts = parts.filter((p) => p != null);
   const totalAnnual = knownParts.length > 0 ? knownParts.reduce((s, v) => s + v, 0) : null;
+
+  const fromDefaults = {};
+  if (listing.annualInsurance == null && defaults.annualInsurance != null) fromDefaults.insurance = true;
+  if (listing.annualTax == null && defaults.annualTax != null) fromDefaults.tax = true;
+  if (listing.annualMaintenance == null && defaults.annualMaintenance != null) fromDefaults.maintenance = true;
+  if (!marina?.winterStorageCost && defaults.winterStorage != null) fromDefaults.winterStorage = true;
+  if (listing.downPaymentPct == null && defaults.downPaymentPct != null) fromDefaults.loan = true;
+  if (listing.interestRate == null && defaults.interestRate != null) fromDefaults.loan = true;
+  if (listing.loanTermYears == null && defaults.loanTermYears != null) fromDefaults.loan = true;
+  if (listingCustom.length === 0 && defaultCustom.length > 0) fromDefaults.customCosts = true;
 
   return {
     loanPaymentMonthly,
@@ -102,13 +118,14 @@ function computeCarryingCost(listing, { listPrice, lengthFt }) {
     customCosts,
     totalAnnual,
     totalMonthly: totalAnnual != null ? Math.round(totalAnnual / 12) : null,
+    fromDefaults,
   };
 }
 
 /**
  * Serialize a listing for API responses with derived metrics.
  */
-export function serializeListing(listing) {
+export function serializeListing(listing, { costDefaults } = {}) {
   const { rawScrapedData: _rawScrapedData, ...rest } = listing;
   const listPrice = listing.listPrice != null ? Number(listing.listPrice) : null;
   const soldPrice = listing.soldPrice != null ? Number(listing.soldPrice) : null;
@@ -129,7 +146,7 @@ export function serializeListing(listing) {
     })()
     : null;
 
-  const carryingCost = computeCarryingCost(listing, { listPrice, lengthFt });
+  const carryingCost = computeCarryingCost(listing, { listPrice, lengthFt, costDefaults });
 
   return {
     ...rest,
@@ -149,8 +166,8 @@ export function serializeListing(listing) {
   };
 }
 
-export function serializeListings(listings) {
-  return listings.map(serializeListing);
+export function serializeListings(listings, opts = {}) {
+  return listings.map((l) => serializeListing(l, opts));
 }
 
 /**

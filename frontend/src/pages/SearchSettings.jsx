@@ -164,6 +164,8 @@ export default function SearchSettings() {
   });
   const [savingDetails, setSavingDetails] = useState(false);
   const [savingCriteria, setSavingCriteria] = useState(false);
+  const [costForm, setCostForm] = useState({});
+  const [savingCosts, setSavingCosts] = useState(false);
 
   const syncDetailsForm = (nextSearch) => {
     setDetailsForm({
@@ -176,6 +178,7 @@ export default function SearchSettings() {
       mustHaves: normalizeCriteriaList(nextSearch?.mustHaves, nextSearch?.assetType || 'home'),
       niceToHaves: normalizeCriteriaList(nextSearch?.niceToHaves, nextSearch?.assetType || 'home'),
     });
+    setCostForm(nextSearch?.costDefaults || {});
   };
 
   const load = async () => {
@@ -436,6 +439,42 @@ export default function SearchSettings() {
     }
   };
 
+  const handleSaveCostDefaults = async (e) => {
+    e.preventDefault();
+    setSavingCosts(true);
+    setError('');
+
+    try {
+      const cleaned = {};
+      for (const [key, val] of Object.entries(costForm)) {
+        if (val !== '' && val != null) cleaned[key] = val;
+      }
+      const data = await searchesAPI.update(searchId, {
+        costDefaults: Object.keys(cleaned).length > 0 ? cleaned : null,
+      });
+      setSearch((current) => ({ ...current, ...data.search }));
+      setCostForm(data.search.costDefaults || {});
+      showSuccess('Cost defaults saved.');
+    } catch (err) {
+      setError(err.message);
+      showError(err.message);
+    } finally {
+      setSavingCosts(false);
+    }
+  };
+
+  const updateCostField = (field, raw) => {
+    setCostForm((c) => {
+      const next = { ...c };
+      if (raw === '' || raw == null) {
+        delete next[field];
+      } else {
+        next[field] = Number(raw);
+      }
+      return next;
+    });
+  };
+
   const isOwner = search?.role === 'owner';
   const canEdit = search?.role === 'owner' || search?.role === 'editor';
   const boatMode = isBoatSearch(search?.assetType);
@@ -545,6 +584,130 @@ export default function SearchSettings() {
           {canEdit && (
             <Button type="submit" disabled={savingCriteria}>
               {savingCriteria ? 'Saving...' : 'Save rules'}
+            </Button>
+          )}
+        </form>
+      </Card>
+
+      <Card className="mb-6">
+        <form onSubmit={handleSaveCostDefaults} className="space-y-4">
+          <div>
+            <h2 className="text-lg font-medium text-pine-900">Cost defaults</h2>
+            <p className="mt-1 text-sm text-pine-600">
+              Fixed costs that apply to every {boatMode ? 'boat' : 'listing'} in this search unless overridden on a specific listing.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <FormField label="Annual insurance ($)" htmlFor="cd-insurance">
+              <input
+                id="cd-insurance"
+                type="number"
+                min="0"
+                step="1"
+                value={costForm.annualInsurance ?? ''}
+                onChange={(e) => updateCostField('annualInsurance', e.target.value)}
+                disabled={!canEdit}
+                placeholder="e.g. 2000"
+                className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              />
+            </FormField>
+
+            <FormField label="Annual tax ($)" htmlFor="cd-tax">
+              <input
+                id="cd-tax"
+                type="number"
+                min="0"
+                step="1"
+                value={costForm.annualTax ?? ''}
+                onChange={(e) => updateCostField('annualTax', e.target.value)}
+                disabled={!canEdit}
+                placeholder="e.g. 500"
+                className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              />
+            </FormField>
+
+            <FormField label="Annual maintenance ($)" htmlFor="cd-maintenance">
+              <input
+                id="cd-maintenance"
+                type="number"
+                min="0"
+                step="1"
+                value={costForm.annualMaintenance ?? ''}
+                onChange={(e) => updateCostField('annualMaintenance', e.target.value)}
+                disabled={!canEdit}
+                placeholder="e.g. 5000"
+                className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              />
+            </FormField>
+
+            {boatMode && (
+              <FormField label="Winter storage ($)" htmlFor="cd-winter">
+                <input
+                  id="cd-winter"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={costForm.winterStorage ?? ''}
+                  onChange={(e) => updateCostField('winterStorage', e.target.value)}
+                  disabled={!canEdit}
+                  placeholder="e.g. 3000"
+                  className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+                />
+              </FormField>
+            )}
+
+            <FormField label="Down payment (%)" htmlFor="cd-down">
+              <input
+                id="cd-down"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={costForm.downPaymentPct ?? ''}
+                onChange={(e) => updateCostField('downPaymentPct', e.target.value)}
+                disabled={!canEdit}
+                placeholder="e.g. 20"
+                className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              />
+            </FormField>
+
+            <FormField label="Interest rate (%)" htmlFor="cd-rate">
+              <input
+                id="cd-rate"
+                type="number"
+                min="0"
+                step="0.01"
+                value={costForm.interestRate ?? ''}
+                onChange={(e) => updateCostField('interestRate', e.target.value)}
+                disabled={!canEdit}
+                placeholder="e.g. 7.5"
+                className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              />
+            </FormField>
+
+            <FormField label="Loan term (years)" htmlFor="cd-term">
+              <input
+                id="cd-term"
+                type="number"
+                min="1"
+                step="1"
+                value={costForm.loanTermYears ?? ''}
+                onChange={(e) => updateCostField('loanTermYears', e.target.value)}
+                disabled={!canEdit}
+                placeholder="e.g. 20"
+                className="w-full rounded-md border border-pine-200 px-3 py-2 text-sm disabled:bg-pine-50"
+              />
+            </FormField>
+          </div>
+
+          <p className="text-xs text-pine-500">
+            These are search-wide defaults. You can still override any value on individual listings.
+          </p>
+
+          {canEdit && (
+            <Button type="submit" disabled={savingCosts}>
+              {savingCosts ? 'Saving...' : 'Save cost defaults'}
             </Button>
           )}
         </form>
