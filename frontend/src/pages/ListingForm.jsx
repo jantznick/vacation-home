@@ -69,6 +69,7 @@ const emptyForm = {
   annualInsurance: '',
   annualTax: '',
   annualMaintenance: '',
+  winterStorageCost: '',
   daysOnMarket: '',
   photoUrls: [],
 };
@@ -217,6 +218,7 @@ export default function ListingForm() {
           annualInsurance: listing.annualInsurance ?? '',
           annualTax: listing.annualTax ?? '',
           annualMaintenance: listing.annualMaintenance ?? '',
+          winterStorageCost: listing.winterStorageCost ?? '',
           daysOnMarket: listing.daysOnMarket ?? '',
         });
         if (listing.sourceUrl) {
@@ -483,6 +485,7 @@ export default function ListingForm() {
           annualInsurance: form.annualInsurance ? Number(form.annualInsurance) : null,
           annualTax: form.annualTax ? Number(form.annualTax) : null,
           annualMaintenance: form.annualMaintenance ? Number(form.annualMaintenance) : null,
+          winterStorageCost: form.winterStorageCost !== '' ? Number(form.winterStorageCost) : null,
           daysOnMarket: form.daysOnMarket ? Number(form.daysOnMarket) : null,
           photoUrls: form.photoUrls?.length ? form.photoUrls : null,
         }
@@ -830,6 +833,9 @@ export default function ListingForm() {
                   </FormField>
                   <FormField label="Annual maintenance ($)" htmlFor="annualMaintenance">
                     <input id="annualMaintenance" name="annualMaintenance" type="number" min="0" value={form.annualMaintenance} onChange={handleChange} className={inputClass} />
+                  </FormField>
+                  <FormField label="Winter storage ($/yr)" htmlFor="winterStorageCost">
+                    <input id="winterStorageCost" name="winterStorageCost" type="number" min="0" value={form.winterStorageCost} onChange={handleChange} className={inputClass} placeholder="Overrides marina/default" />
                   </FormField>
                   <FormField label="Marina" htmlFor="marinaId">
                     <select id="marinaId" name="marinaId" value={form.marinaId} onChange={handleChange} className={inputClass}>

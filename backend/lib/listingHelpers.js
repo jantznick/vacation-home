@@ -75,7 +75,9 @@ function computeCarryingCost(listing, { listPrice, lengthFt, costDefaults }) {
     ? options[listing.preferredSlipIndex]
     : bestSlipOption(marina, lengthFt);
   const slipAnnual = slip ? slipAnnualFromOption(slip, lengthFt) : null;
-  const winterStorage = marina?.winterStorageCost ?? defaults.winterStorage ?? null;
+  // Listing override (incl. 0 to suppress) → marina → search defaults
+  const winterRaw = listing.winterStorageCost ?? marina?.winterStorageCost ?? defaults.winterStorage ?? null;
+  const winterStorage = winterRaw || null;
 
   const insurance = listing.annualInsurance ?? defaults.annualInsurance ?? null;
   const tax = listing.annualTax ?? defaults.annualTax ?? null;
@@ -98,7 +100,9 @@ function computeCarryingCost(listing, { listPrice, lengthFt, costDefaults }) {
   if (listing.annualInsurance == null && defaults.annualInsurance != null) fromDefaults.insurance = true;
   if (listing.annualTax == null && defaults.annualTax != null) fromDefaults.tax = true;
   if (listing.annualMaintenance == null && defaults.annualMaintenance != null) fromDefaults.maintenance = true;
-  if (!marina?.winterStorageCost && defaults.winterStorage != null) fromDefaults.winterStorage = true;
+  if (listing.winterStorageCost == null && !marina?.winterStorageCost && defaults.winterStorage != null) {
+    fromDefaults.winterStorage = true;
+  }
   if (listing.downPaymentPct == null && defaults.downPaymentPct != null) fromDefaults.loan = true;
   if (listing.interestRate == null && defaults.interestRate != null) fromDefaults.loan = true;
   if (listing.loanTermYears == null && defaults.loanTermYears != null) fromDefaults.loan = true;

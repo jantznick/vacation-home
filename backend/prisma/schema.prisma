@@ -410,6 +410,8 @@ model Listing {
   annualInsurance    Int?
   annualTax          Int?
   annualMaintenance  Int?
+  /// Listing override for winter storage ($/yr). Null = use marina or search default.
+  winterStorageCost  Int?
   /// Which slip option index on the linked marina the user selected.
   preferredSlipIndex Int?
   /// Custom cost line items — JSON array of { name, annualCost }.

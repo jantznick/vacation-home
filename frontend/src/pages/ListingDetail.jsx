@@ -473,6 +473,7 @@ function AddCostModal({ boatMode, listing, onSave, onClose, api, initialTab = 'm
     slipIndex: listing.preferredSlipIndex ?? '',
     annualInsurance: listing.annualInsurance ?? '',
     annualTax: listing.annualTax ?? '',
+    winterStorageCost: listing.winterStorageCost ?? listing.carryingCost?.winterStorage ?? '',
     dpMode: 'pct',
     downPaymentDollars: listing.listPrice && listing.downPaymentPct != null
       ? String(Math.round(listing.listPrice * listing.downPaymentPct / 100))
@@ -520,6 +521,8 @@ function AddCostModal({ boatMode, listing, onSave, onClose, api, initialTab = 'm
     } else if (mode === 'marina') {
       updates.marinaId = form.marinaId || null;
       updates.preferredSlipIndex = form.slipIndex !== '' ? Number(form.slipIndex) : null;
+    } else if (mode === 'winter') {
+      updates.winterStorageCost = form.winterStorageCost !== '' ? Number(form.winterStorageCost) : null;
     } else if (mode === 'insurance') {
       updates.annualInsurance = form.annualInsurance ? Number(form.annualInsurance) : null;
     } else if (mode === 'tax') {
@@ -555,6 +558,7 @@ function AddCostModal({ boatMode, listing, onSave, onClose, api, initialTab = 'm
             { id: 'loan', label: 'Loan' },
             { id: 'maintenance', label: 'Maintenance' },
             ...(boatMode ? [{ id: 'marina', label: 'Marina + slip' }] : []),
+            ...(boatMode ? [{ id: 'winter', label: 'Winter' }] : []),
             { id: 'insurance', label: 'Insurance' },
             { id: 'tax', label: 'Tax' },
             { id: 'custom', label: 'Other' },
@@ -730,6 +734,25 @@ function AddCostModal({ boatMode, listing, onSave, onClose, api, initialTab = 'm
             );
           })()}
 
+          {mode === 'winter' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-pine-800">Winter storage ($/yr)</label>
+              <input
+                name="winterStorageCost"
+                type="number"
+                min="0"
+                value={form.winterStorageCost}
+                onChange={handleChange}
+                className={inputClass}
+                placeholder="e.g. 4000"
+                autoFocus
+              />
+              <p className="mt-1 text-xs text-pine-500">
+                Overrides the marina or search default for this listing. Clear to use the default again.
+              </p>
+            </div>
+          )}
+
           {mode === 'insurance' && (
             <div>
               <label className="mb-1 block text-sm font-medium text-pine-800">Annual insurance ($)</label>
@@ -802,9 +825,14 @@ function CarryingCostCard({ listing, boatMode, canEdit, searchId, onUpdate, api 
   }
 
   if (boatMode && cc.winterStorage != null) {
-    rows.push({ key: 'winter', label: 'Winter storage', monthly: null, annual: cc.winterStorage, editTab: 'marina',
+    rows.push({
+      key: 'winter',
+      label: 'Winter storage',
+      monthly: Math.round(cc.winterStorage / 12),
+      annual: cc.winterStorage,
+      editTab: 'winter',
       isDefault: fd.winterStorage,
-      onRemove: () => onUpdate({ marinaId: null, preferredSlipIndex: null }),
+      onRemove: () => onUpdate({ winterStorageCost: 0 }),
     });
   }
 
