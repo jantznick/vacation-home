@@ -71,10 +71,16 @@ export function buildRefreshUpdateData(existing, scrapedFields) {
     boatSpecs[key] = scraped[key] != null ? scraped[key] : existing[key];
   }
 
+  // Only write raw scrape when the fetch returned some — Prisma client omits
+  // rawScrapedData on reads, so we must not depend on `existing.rawScrapedData`.
+  const rawUpdate = scraped.rawScrapedData != null
+    ? { rawScrapedData: scraped.rawScrapedData }
+    : {};
+
   return {
     listPrice: scraped.listPrice ?? existing.listPrice,
     photoUrls: shouldReplacePhotos ? scrapedPhotos : existingPhotos,
-    rawScrapedData: scraped.rawScrapedData ?? existing.rawScrapedData,
+    ...rawUpdate,
     fetchedAt: new Date(),
     ...boatSpecs,
   };

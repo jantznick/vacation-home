@@ -1,6 +1,17 @@
 import puppeteer from 'puppeteer';
 
 let browserPromise = null;
+let idleCloseTimer = null;
+
+/** Close Chromium after this much idle time so prod RAM doesn't stay inflated. */
+function idleCloseMs() {
+  const raw = process.env.PUPPETEER_IDLE_MS;
+  if (raw !== undefined && raw !== '') {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 30_000;
+  }
+  return 30_000;
+}
 
 function isProduction() {
   return process.env.NODE_ENV === 'production';
@@ -65,7 +76,42 @@ function launchOptions() {
   return options;
 }
 
+function cancelIdleClose() {
+  if (idleCloseTimer) {
+    clearTimeout(idleCloseTimer);
+    idleCloseTimer = null;
+  }
+}
+
+function scheduleIdleClose() {
+  // Keep the browser open while debugging locally so the visible window stays usable.
+  if (isDebugMode()) return;
+
+  cancelIdleClose();
+  const ms = idleCloseMs();
+  if (ms === 0) {
+    closeBrowser().catch((error) => {
+      console.warn('[puppeteer] Immediate close failed:', error.message);
+    });
+    return;
+  }
+
+  idleCloseTimer = setTimeout(() => {
+    idleCloseTimer = null;
+    console.info(`[puppeteer] Closing browser after ${ms}ms idle`);
+    closeBrowser().catch((error) => {
+      console.warn('[puppeteer] Idle close failed:', error.message);
+    });
+  }, ms);
+
+  // Don't keep the Node process alive solely for this timer.
+  if (typeof idleCloseTimer.unref === 'function') {
+    idleCloseTimer.unref();
+  }
+}
+
 async function getBrowser() {
+  cancelIdleClose();
   if (!browserPromise) {
     browserPromise = puppeteer.launch(launchOptions()).catch((error) => {
       browserPromise = null;
@@ -91,6 +137,9 @@ const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/
  *
  * On hosted platforms (Railway, etc.) Cloudflare often blocks the datacenter IP.
  * Callers should treat missing Redux as a hard failure and ask for page-source paste.
+ *
+ * The browser process is reused across quick successive imports, then closed after
+ * PUPPETEER_IDLE_MS (default 30s) so production memory returns to a normal Node baseline.
  */
 export async function fetchHtmlWithPuppeteer(url) {
   const debug = isDebugMode();
@@ -251,15 +300,22 @@ export async function fetchHtmlWithPuppeteer(url) {
     return html;
   } finally {
     page.off('response', onResponse);
-    await page.close();
+    await page.close().catch(() => {});
+    scheduleIdleClose();
   }
 }
 
 export async function closeBrowser() {
+  cancelIdleClose();
   if (browserPromise) {
-    const browser = await browserPromise;
-    await browser.close();
+    const pending = browserPromise;
     browserPromise = null;
+    try {
+      const browser = await pending;
+      await browser.close();
+    } catch (error) {
+      console.warn('[puppeteer] closeBrowser:', error.message);
+    }
   }
 }
 

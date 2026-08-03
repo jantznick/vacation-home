@@ -35,6 +35,9 @@ app.use(cookieParser());
 const PgSession = connectPgSimple(session);
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // Keep session pool small — stacks with Prisma's own pool against one Postgres.
+  max: Number(process.env.PG_POOL_MAX || 3),
+  idleTimeoutMillis: Number(process.env.PG_POOL_IDLE_MS || 10_000),
 });
 
 const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
@@ -86,7 +89,8 @@ app.listen(PORT, '0.0.0.0', () => {
 
 async function shutdown() {
   await closeBrowser().catch(() => {});
-  await prisma.$disconnect();
+  await prisma.$disconnect().catch(() => {});
+  await pgPool.end().catch(() => {});
   process.exit(0);
 }
 

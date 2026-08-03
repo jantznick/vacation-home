@@ -202,9 +202,12 @@ Start command: leave empty / use the Dockerfile `CMD` (`prisma migrate deploy` t
 | `ZILLOW_FETCH_METHOD` | No | Legacy — unused by Zillow URL import |
 | `PUPPETEER_EXECUTABLE_PATH` | Prod Docker | Path to Chromium (Docker image sets `/usr/bin/chromium`) |
 | `PUPPETEER_SKIP_DOWNLOAD` | Prod Docker | `true` when using system Chromium |
+| `PUPPETEER_IDLE_MS` | No | Close Chromium after this idle time (default `30000`; `0` = close after each fetch) |
 | `PUPPETEER_HEADLESS` | Local debug only | Set `false` locally to watch the browser (ignored in `NODE_ENV=production`) |
+| `PRISMA_CONNECTION_LIMIT` | No | Prisma pool size (default `5`) |
+| `PG_POOL_MAX` | No | Session `pg.Pool` size (default `3`) |
 
-YachtWorld URL import uses Puppeteer as a headless fallback when a plain fetch is blocked. Leave Puppeteer debug vars unset in production.
+YachtWorld URL import uses Puppeteer as a headless fallback when a plain fetch is blocked. The browser is closed after a short idle so it does not keep hundreds of MB of RAM forever. Leave Puppeteer debug vars unset in production.
 
 On Railway/Cloudflare-blocked hosts, URL import may only get partial listing fields (JSON-LD / URL slug). Full fields require a successful Redux payload (often works from a residential IP).
 
